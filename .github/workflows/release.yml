@@ -46,9 +46,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $version = "${{ github.ref_name }}".TrimStart('v')
-          gh release create "${{ github.ref_name }}" `
-            "dist/Prompt-Generator-Ollama-$version.exe" `
-            "dist/Prompt-Generator-Ollama-$version-win-x64.zip" `
-            "dist/SHA256SUMS.txt" `
-            --title "Prompt Generator Ollama $version" `
-            --generate-notes
+          $assets = @(
+            "dist/Prompt-Generator-Ollama-$version.exe",
+            "dist/Prompt-Generator-Ollama-$version-win-x64.zip",
+            "dist/SHA256SUMS.txt"
+          )
+          if (gh release view "${{ github.ref_name }}" 2>$null) {
+            gh release upload "${{ github.ref_name }}" @assets --clobber
+          } else {
+            gh release create "${{ github.ref_name }}" @assets `
+              --title "Prompt Generator Ollama $version" `
+              --generate-notes
+          }
