@@ -1,0 +1,3113 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Generator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #060608;
+    --surface: #0e0e12;
+    --border: #1e1e28;
+    --accent: #c8f04a;
+    --accent2: #7b5fff;
+    --text: #e8e8f0;
+    --muted: #5a5a72;
+    --danger: #ff4466;
+    --grid-line: rgba(200,240,74,0.03);
+  }
+
+  html.light {
+    --bg: #f4f4f0;
+    --surface: #ffffff;
+    --border: #ddddd6;
+    --accent: #5a8a00;
+    --accent2: #6040d0;
+    --text: #18181c;
+    --muted: #888880;
+    --danger: #cc2244;
+    --grid-line: rgba(90,138,0,0.06);
+  }
+
+  @media (prefers-color-scheme: light) {
+    html.system {
+      --bg: #f4f4f0;
+      --surface: #ffffff;
+      --border: #ddddd6;
+      --accent: #5a8a00;
+      --accent2: #6040d0;
+      --text: #18181c;
+      --muted: #888880;
+      --danger: #cc2244;
+      --grid-line: rgba(90,138,0,0.06);
+    }
+  }
+
+  /* Theme toggle */
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px;
+    margin-left: auto;
+  }
+
+  .theme-btn {
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .theme-btn.active {
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 700;
+  }
+
+  .theme-btn:not(.active):hover { color: var(--text); }
+
+  /* LoRA toggle */
+  .lora-btn {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    transition: all 0.2s;
+    text-align: left;
+  }
+  .lora-btn:hover { border-color: var(--accent2); }
+  .lora-btn.active { border-color: var(--accent); background: rgba(200,240,74,0.05); }
+  html.light .lora-btn.active { background: rgba(90,138,0,0.07); }
+  .lora-icon { font-size: 1.1rem; }
+  .lora-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .lora-desc {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.03em;
+  }
+  .lora-btn.active .lora-label { color: var(--accent); }
+  .lora-btn.active .lora-desc { color: var(--text); }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  .logo-mark {
+    width: 44px;
+    height: 44px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .logo-mark svg { width: 24px; height: 24px; }
+
+  h1 {
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .badge {
+    margin-left: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+    padding: 4px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.05em;
+  }
+
+  /* Main grid */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 680px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  /* Panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(200,240,74,0.04);
+  }
+
+  .drop-zone.has-image { border-style: solid; border-color: var(--border); }
+
+  .drop-zone img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+    opacity: 0.85;
+  }
+
+  .drop-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(200,240,74,0.08);
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    color: var(--accent);
+    font-size: 1.4rem;
+    transition: transform 0.2s;
+  }
+
+  .drop-zone:hover .drop-icon { transform: scale(1.1); }
+
+  .drop-text {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .drop-text strong { color: var(--text); font-weight: 600; }
+
+  #fileInput { display: none; }
+
+  .img-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(6,6,8,0.85) 0%, transparent 50%);
+    border-radius: 10px;
+    display: flex;
+    align-items: flex-end;
+    padding: 12px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .drop-zone.has-image:hover .img-overlay { opacity: 1; }
+
+  .img-overlay button {
+    background: var(--danger);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+  }
+
+  /* Options */
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .option-group label {
+    display: block;
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  .option-group select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 9px 12px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.82rem;
+    appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235a5a72' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+    transition: border-color 0.2s;
+  }
+
+  .option-group select:focus {
+    outline: none;
+    border-color: var(--accent2);
+  }
+
+  /* Generate button */
+  .btn-generate {
+    width: 100%;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .btn-generate:hover { background: #d8ff5a; transform: translateY(-1px); }
+  .btn-generate:active { transform: translateY(0); }
+  .btn-generate:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(6,6,8,0.3);
+    border-top-color: var(--bg);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Output panel - full width */
+  .panel.full { grid-column: 1 / -1; }
+
+  .output-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    min-height: 140px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+    transition: border-color 0.3s;
+  }
+
+  .output-box.active { border-color: var(--accent2); }
+
+  .output-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-secondary.copied { border-color: var(--accent); color: var(--accent); }
+
+  /* Variants section */
+  .variants-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .variant-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .variant-card:hover { border-color: var(--accent2); }
+  .variant-card.selected { border-color: var(--accent); background: rgba(200,240,74,0.04); }
+
+  .variant-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 6px;
+  }
+
+  .variant-card p {
+    font-size: 0.76rem;
+    color: var(--muted);
+    line-height: 1.5;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .variant-card.selected p { color: var(--text); }
+
+  .select-dot {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    transition: all 0.2s;
+  }
+
+  .variant-card.selected .select-dot {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* Status */
+  .status-bar {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .status-dot.ready { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .status-dot.loading { background: var(--accent2); animation: pulse 1s ease-in-out infinite; }
+  .status-dot.error { background: var(--danger); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Error message */
+  .error-msg {
+    background: rgba(255,68,102,0.08);
+    border: 1px solid rgba(255,68,102,0.3);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 0.8rem;
+    color: var(--danger);
+    font-family: 'Space Mono', monospace;
+    margin-top: 12px;
+    display: none;
+  }
+
+  /* Tab buttons */
+  .tab-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 7px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+  }
+  .tab-btn:hover { border-color: var(--accent2); color: var(--text); }
+  .tab-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(200,240,74,0.06); }
+
+  /* Placeholder text */
+  .placeholder {
+    color: var(--muted);
+    font-style: italic;
+    font-size: 0.78rem;
+  }
+
+  /* Model info tooltip */
+  .model-row { display: flex; align-items: center; gap: 6px; }
+  .model-row select { flex: 1; }
+  .info-btn {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--muted); font-family: 'Space Mono', monospace;
+    font-size: 0.72rem; font-weight: 700; cursor: pointer;
+    display: grid; place-items: center; flex-shrink: 0;
+    transition: all 0.2s; position: relative;
+  }
+  .info-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .tooltip {
+    position: absolute; bottom: calc(100% + 8px); right: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+    width: 260px; z-index: 200;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    pointer-events: none; opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.18s, transform 0.18s;
+    text-align: left;
+  }
+  .info-btn:hover .tooltip,
+  .info-btn:focus .tooltip { opacity: 1; transform: translateY(0); pointer-events: all; }
+  .tooltip-name {
+    font-weight: 700; font-size: 0.82rem; margin-bottom: 5px; color: var(--text);
+  }
+  .tooltip-provider {
+    font-family: 'Space Mono', monospace; font-size: 0.6rem;
+    color: var(--accent2); letter-spacing: 0.06em; margin-bottom: 8px;
+  }
+  .tooltip-desc { font-size: 0.76rem; color: var(--muted); line-height: 1.55; margin-bottom: 8px; }
+  .tooltip-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tooltip-tag {
+    font-family: 'Space Mono', monospace; font-size: 0.58rem;
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 2px 7px; color: var(--muted);
+  }
+  .tooltip-tag.green { border-color: var(--accent); color: var(--accent); }
+  .tooltip-tag.purple { border-color: var(--accent2); color: var(--accent2); }
+
+  /* Prompt variations panel */
+  .variations-area { display: none; margin-top: 16px; }
+  .variations-area.visible { display: block; }
+  .variations-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px; margin-top: 10px;
+  }
+  .variation-btn {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 9px; padding: 9px 10px;
+    font-family: 'Syne', sans-serif; font-size: 0.76rem;
+    color: var(--muted); cursor: pointer; text-align: left;
+    transition: all 0.18s; line-height: 1.3;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .variation-btn:hover { border-color: var(--accent2); color: var(--text); }
+  .variation-btn.loading { border-color: var(--accent2); color: var(--accent2); }
+  .variation-btn .var-icon { font-size: 1rem; }
+  .variation-btn .var-label { font-weight: 600; font-size: 0.74rem; color: var(--text); }
+  .variation-btn .var-desc { font-size: 0.65rem; color: var(--muted); }
+
+  /* Editable output box */
+  .output-box[contenteditable="true"] {
+    outline: none;
+    border-color: var(--accent2) !important;
+    cursor: text;
+  }
+  .output-box[contenteditable="true"]:focus { border-color: var(--accent) !important; }
+
+  /* Negative prompt editor */
+  .neg-prompt-area {
+    margin-top: 14px;
+    display: none;
+  }
+  .neg-prompt-area.visible { display: block; }
+  .neg-prompt-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+  }
+  .neg-prompt-label::after { content:''; flex:1; height:1px; background:var(--border); }
+  #negPromptBox {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.76rem;
+    line-height: 1.6;
+    color: var(--text);
+    resize: vertical;
+    min-height: 70px;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  #negPromptBox:focus { border-color: var(--accent2); }
+
+  /* Key save checkbox */
+  .key-save-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 6px;
+  }
+  .key-save-row input[type=checkbox] { accent-color: var(--accent); width:14px; height:14px; cursor:pointer; }
+  .key-save-row label {
+    font-family: 'Space Mono', monospace; font-size: 0.65rem;
+    color: var(--muted); cursor: pointer; letter-spacing: 0.04em;
+  }
+
+  /* Batch mode */
+  .batch-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .batch-zone:hover { border-color: var(--accent); background: rgba(200,240,74,0.03); }
+  .batch-zone p { font-size: 0.82rem; color: var(--muted); }
+  .batch-zone strong { color: var(--text); }
+  .batch-list { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .batch-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; font-size: 0.78rem;
+  }
+  .batch-item-thumb {
+    width: 36px; height: 36px; border-radius: 6px;
+    object-fit: cover; flex-shrink: 0;
+  }
+  .batch-item-name { flex: 1; font-family: 'Space Mono', monospace; font-size: 0.68rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .batch-item-status { font-family: 'Space Mono', monospace; font-size: 0.65rem; flex-shrink: 0; }
+  .batch-item-status.pending  { color: var(--muted); }
+  .batch-item-status.running  { color: var(--accent2); }
+  .batch-item-status.done     { color: var(--accent); }
+  .batch-item-status.error    { color: var(--danger); }
+  .batch-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; padding: 2px 4px; }
+  .batch-remove:hover { color: var(--danger); }
+
+  /* History modal */
+  .history-empty { color: var(--muted); font-family: 'Space Mono', monospace; font-size: 0.78rem; text-align: center; padding: 32px 0; }
+  .history-list { display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto; padding-right: 4px; }
+  .history-item {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px; cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .history-item:hover { border-color: var(--accent); }
+  .history-item-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px;
+  }
+  .history-item-time { font-family: 'Space Mono', monospace; font-size: 0.62rem; color: var(--muted); }
+  .history-item-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+  .history-tag {
+    font-family: 'Space Mono', monospace; font-size: 0.58rem;
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 1px 7px; color: var(--muted);
+  }
+  .history-item-preview { font-size: 0.78rem; color: var(--text); line-height: 1.5; }
+  .history-item-del {
+    float: right; background: none; border: none;
+    color: var(--muted); cursor: pointer; font-size: 0.8rem; margin-left: 8px;
+  }
+  .history-item-del:hover { color: var(--danger); }
+  .history-clear-btn {
+    margin-top: 14px; width: 100%;
+    background: transparent; border: 1px solid var(--danger);
+    color: var(--danger); border-radius: 8px; padding: 8px;
+    font-family: 'Space Mono', monospace; font-size: 0.7rem;
+    cursor: pointer; transition: all 0.2s; letter-spacing: 0.05em;
+  }
+  .history-clear-btn:hover { background: rgba(255,68,102,0.1); }
+
+  /* Help button */
+  .help-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    width: 32px; height: 32px;
+    display: grid; place-items: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .help-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* History header button — more prominent */
+  .history-header-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--accent2);
+    border-radius: 999px;
+    padding: 6px 14px 6px 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem; letter-spacing: 0.05em;
+    color: var(--accent2);
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .history-header-btn:hover {
+    background: var(--accent2);
+    color: var(--bg);
+    border-color: var(--accent2);
+  }
+  .history-header-label { font-weight: 700; }
+
+  /* Modal overlay */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(6,6,8,0.82);
+    backdrop-filter: blur(6px);
+    z-index: 1000;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 32px 16px 32px;
+    overflow-y: auto;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    width: 100%; max-width: 760px;
+    padding: 36px 40px;
+    position: relative;
+    transform: translateY(20px);
+    transition: transform 0.25s;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+
+  .modal-close {
+    position: absolute; top: 18px; right: 18px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 12px;
+    font-family: 'Space Mono', monospace; font-size: 0.72rem;
+    color: var(--muted); cursor: pointer; transition: all 0.2s;
+  }
+  .modal-close:hover { border-color: var(--danger); color: var(--danger); }
+
+  .modal h2 {
+    font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em;
+    margin-bottom: 6px;
+  }
+  .modal h2 span { color: var(--accent); }
+
+  .modal-version {
+    font-family: 'Space Mono', monospace; font-size: 0.65rem;
+    color: var(--muted); letter-spacing: 0.08em; margin-bottom: 28px;
+  }
+
+  .help-section { margin-bottom: 28px; }
+
+  .help-section h3 {
+    font-size: 0.72rem; font-family: 'Space Mono', monospace;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--accent2); margin-bottom: 12px;
+    padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  }
+
+  .help-section p, .help-section li {
+    font-size: 0.83rem; line-height: 1.7; color: var(--text);
+  }
+  .help-section ul { padding-left: 18px; }
+  .help-section li { margin-bottom: 4px; }
+  .help-section strong { color: var(--accent); font-weight: 700; }
+  .help-section code {
+    font-family: 'Space Mono', monospace; font-size: 0.75rem;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 6px; color: var(--accent2);
+  }
+
+  .help-provider-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px; margin-top: 10px;
+  }
+  .help-provider-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .help-provider-card .hpc-name {
+    font-weight: 700; font-size: 0.85rem; margin-bottom: 4px;
+  }
+  .help-provider-card .hpc-key {
+    font-family: 'Space Mono', monospace; font-size: 0.65rem;
+    color: var(--accent2); margin-bottom: 4px;
+  }
+  .help-provider-card .hpc-limit {
+    font-size: 0.72rem; color: var(--muted);
+  }
+  .help-provider-card a {
+    display: block; margin-top: 6px;
+    font-family: 'Space Mono', monospace; font-size: 0.65rem;
+    color: var(--accent); text-decoration: none;
+  }
+  .help-provider-card a:hover { text-decoration: underline; }
+
+  .help-step {
+    display: flex; gap: 14px; margin-bottom: 12px; align-items: flex-start;
+  }
+  .help-step-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: var(--bg);
+    font-weight: 800; font-size: 0.75rem;
+    display: grid; place-items: center; flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .help-step p { margin: 0; font-size: 0.83rem; line-height: 1.6; }
+
+  .help-tabs {
+    display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .help-tab-btn {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 14px;
+    font-family: 'Space Mono', monospace; font-size: 0.68rem;
+    letter-spacing: 0.05em; color: var(--muted);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .help-tab-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(200,240,74,0.06); }
+  .help-tab-btn:hover:not(.active) { color: var(--text); border-color: var(--accent2); }
+
+  .help-content { display: none; }
+  .help-content.active { display: block; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="4" fill="#060608"/>
+        <path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="#060608" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h1 data-i18n="title">Prompt <span>Generator</span></h1>
+    <div class="theme-toggle" style="margin-left:0;">
+      <button class="theme-btn active" id="btnDe" onclick="setLang('de')">🇩🇪 DE</button>
+      <button class="theme-btn" id="btnEn" onclick="setLang('en')">🇬🇧 EN</button>
+    </div>
+    <div class="theme-toggle">
+      <button class="theme-btn active" id="btnDark" onclick="setTheme('dark')">🌙 Dark</button>
+      <button class="theme-btn" id="btnLight" onclick="setTheme('light')">☀️ Light</button>
+      <button class="theme-btn" id="btnSystem" onclick="setTheme('system')">⚙️ System</button>
+    </div>
+    <div class="badge">Ollama · lokal / LAN</div>
+    <button class="history-header-btn" onclick="openHistory()" title="Verlauf / History">
+      <span>🕘</span><span class="history-header-label" data-i18n="historyBtnLabel">Verlauf</span>
+    </button>
+    <button class="help-btn" onclick="openHelp()" title="Help / Hilfe">?</button>
+  </header>
+
+  <div class="grid">
+    <!-- Image Upload -->
+    <div class="panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="panel-label" style="margin-bottom:0;" data-i18n="step1">01 · Bild hochladen</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-family:'Space Mono',monospace;font-size:0.62rem;color:var(--muted);" data-i18n="batchLabel">Batch</span>
+          <div class="theme-toggle" style="padding:3px;">
+            <button class="theme-btn active" id="btnSingle" onclick="setBatchMode(false)" data-i18n="single">Einzeln</button>
+            <button class="theme-btn" id="btnBatch" onclick="setBatchMode(true)" data-i18n="batch">Batch</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Single mode -->
+      <div id="singleUpload">
+        <div class="drop-zone" id="dropZone">
+          <div class="drop-icon">🖼️</div>
+          <div class="drop-text">
+            <strong data-i18n="dropTitle">Bild hier ablegen</strong><br>
+            <span data-i18n="dropSub">oder klicken zum Auswählen</span><br>
+            <small>JPG, PNG, WEBP · max 20 MB</small>
+          </div>
+          <div class="img-overlay" id="imgOverlay">
+            <button onclick="clearImage(event)" data-i18n="removeBtn">✕ Entfernen</button>
+          </div>
+        </div>
+        <input type="file" id="fileInput" accept="image/*">
+        <div class="status-bar">
+          <div class="status-dot" id="uploadDot"></div>
+          <span id="uploadStatus" data-i18n="waitingImg">Warte auf Bild …</span>
+        </div>
+      </div>
+
+      <!-- Batch mode -->
+      <div id="batchUpload" style="display:none;">
+        <div class="batch-zone" onclick="document.getElementById('batchFileInput').click()" id="batchZone">
+          <p><strong data-i18n="batchDrop">Bilder hier ablegen</strong><br><span data-i18n="batchDropSub">oder klicken · mehrere Bilder möglich</span></p>
+        </div>
+        <input type="file" id="batchFileInput" accept="image/*" multiple style="display:none">
+        <div class="batch-list" id="batchList"></div>
+        <button class="btn-generate" id="batchRunBtn" onclick="runBatch()" disabled style="margin-top:12px;width:100%;">
+          <div class="spinner" id="batchSpinner" style="display:none;"></div>
+          <span id="batchBtnLabel" data-i18n="batchRun">⚡ Batch generieren</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Options -->
+    <div class="panel">
+      <div class="panel-label" data-i18n="step2">02 · Optionen</div>
+      <div class="options-grid">
+        <div class="option-group">
+          <label data-i18n="labelStyle">Stil</label>
+          <select id="styleOpt">
+            <option value="photorealistic" data-i18n-opt="stylePhoto">Photorealistisch</option>
+            <option value="cinematic">Cinematic</option>
+            <option value="instagram style, lifestyle photography, warm tones, high contrast, polished">Instagram Style</option>
+            <option value="tiktok style, candid, dynamic, vibrant colors, raw energy, social media aesthetic">TikTok Style</option>
+            <option value="oil painting" data-i18n-opt="styleOil">Ölgemälde</option>
+            <option value="digital art">Digital Art</option>
+            <option value="anime">Anime</option>
+            <option value="watercolor" data-i18n-opt="styleWater">Aquarell</option>
+            <option value="sketch" data-i18n-opt="styleSketch">Skizze / Zeichnung</option>
+            <option value="3D render">3D Render</option>
+          </select>
+        </div>
+        <div class="option-group">
+          <label data-i18n="labelMood">Stimmung</label>
+          <select id="moodOpt">
+            <option value="neutral" data-i18n-opt="moodNeutral">Neutral</option>
+            <option value="dramatic" data-i18n-opt="moodDramatic">Dramatisch</option>
+            <option value="serene" data-i18n-opt="moodSerene">Ruhig / Friedlich</option>
+            <option value="mysterious" data-i18n-opt="moodMysterious">Geheimnisvoll</option>
+            <option value="energetic" data-i18n-opt="moodEnergetic">Energetisch</option>
+            <option value="melancholic" data-i18n-opt="moodMelancholic">Melancholisch</option>
+            <option value="epic" data-i18n-opt="moodEpic">Episch</option>
+          </select>
+        </div>
+        <div class="option-group">
+          <label data-i18n="labelLight">Beleuchtung</label>
+          <select id="lightOpt">
+            <option value="natural light" data-i18n-opt="lightNatural">Natürliches Licht</option>
+            <option value="golden hour" data-i18n-opt="lightGolden">Goldene Stunde</option>
+            <option value="studio lighting" data-i18n-opt="lightStudio">Studio-Licht</option>
+            <option value="neon lights" data-i18n-opt="lightNeon">Neon-Lichter</option>
+            <option value="dramatic shadows" data-i18n-opt="lightDramatic">Dramatische Schatten</option>
+            <option value="soft diffused light" data-i18n-opt="lightSoft">Weiches Licht</option>
+            <option value="backlit" data-i18n-opt="lightBacklit">Gegenlicht</option>
+          </select>
+        </div>
+        <div class="option-group">
+          <label data-i18n="labelDetail">Detailgrad</label>
+          <select id="detailOpt">
+            <option value="highly detailed, 8k" data-i18n-opt="detailVeryHigh">Sehr hoch (8K)</option>
+            <option value="detailed, 4k" data-i18n-opt="detailHigh">Hoch (4K)</option>
+            <option value="medium detail" data-i18n-opt="detailMed">Mittel</option>
+            <option value="stylized, minimal detail" data-i18n-opt="detailMin">Stilisiert / Minimal</option>
+          </select>
+        </div>
+        <div class="option-group">
+          <label data-i18n="labelCamera">Kamera</label>
+          <select id="cameraOpt">
+            <option value="shot on iPhone 15 Pro, mobile photography">iPhone (mobile)</option>
+            <option value="webcam shot, 1080p, slight fish-eye, flat lighting">Webcam</option>
+            <option value="" data-i18n-opt="camAuto">Automatisch</option>
+            <option value="shot on 35mm lens" data-i18n-opt="cam35">35mm Objektiv</option>
+            <option value="shot on 85mm portrait lens">85mm Portrait</option>
+            <option value="wide angle shot" data-i18n-opt="camWide">Weitwinkel</option>
+            <option value="macro photography">Makro</option>
+            <option value="aerial view" data-i18n-opt="camAerial">Vogelperspektive</option>
+            <option value="close-up portrait" data-i18n-opt="camCloseup">Nahaufnahme</option>
+          </select>
+        </div>
+        <div class="option-group">
+          <label data-i18n="labelVariants">Varianten</label>
+          <select id="variantsOpt">
+            <option value="1" data-i18n-opt="var1">1 Prompt</option>
+            <option value="3" selected data-i18n-opt="var3">3 Varianten</option>
+            <option value="5" data-i18n-opt="var5">5 Varianten</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- LoRA Toggle -->
+      <div style="margin-bottom:16px;">
+        <div class="panel-label" style="margin-bottom:10px;" data-i18n="loraMode">Generierungsmodus</div>
+        <div style="display:flex;gap:8px;">
+          <button class="lora-btn active" id="btnLora" onclick="setLoraMode('lora')">
+            <span class="lora-icon">🧬</span>
+            <span class="lora-label" data-i18n="loraWith">Mit LoRA</span>
+            <span class="lora-desc" data-i18n="loraWithDesc">Gesicht & Haare via LoRA</span>
+          </button>
+          <button class="lora-btn" id="btnNoLora" onclick="setLoraMode('nolora')">
+            <span class="lora-icon">🎨</span>
+            <span class="lora-label" data-i18n="loraWithout">Ohne LoRA</span>
+            <span class="lora-desc" data-i18n="loraWithoutDesc">Kompletter Charakter im Prompt</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="option-group" style="margin-bottom:14px;">
+        <label data-i18n="ollamaServer">Ollama-Server</label>
+        <input type="url" id="ollamaServer" value="http://127.0.0.1:11434" placeholder="http://192.168.1.50:11434" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 12px;font-family:'Space Mono',monospace;font-size:0.78rem;transition:border-color 0.2s;outline:none;margin-bottom:10px;" oninput="onOllamaServerInput()">
+        <label data-i18n="ollamaModel">Lokales Ollama Vision-Modell</label>
+        <div class="model-row">
+          <select id="ollamaModel" onchange="onOllamaModelChange()">
+            <option value="">Installierte Modelle werden geladen …</option>
+          </select>
+          <button class="info-btn" id="ollamaRefreshBtn" onclick="loadOllamaModels()" data-i18n-title="ollamaRefresh" title="Modellliste neu laden">↻</button>
+        </div>
+        <div class="key-save-row">
+          <span class="status-dot" id="ollamaDot"></span>
+          <span id="ollamaStatus" data-i18n="ollamaChecking">Ollama wird geprüft …</span>
+        </div>
+        <div style="font-size:0.7rem;color:var(--muted);margin-top:6px;line-height:1.5;" data-i18n="ollamaHint">Lokaler oder Netzwerk-Server · kein API-Key erforderlich</div>
+      </div>
+      <button class="btn-generate" id="generateBtn" onclick="generatePrompt()" disabled>
+        <div class="spinner" id="spinner"></div>
+        <span id="btnLabel" data-i18n="generateBtn">⚡ Prompt generieren</span>
+      </button>
+      <div class="error-msg" id="errorMsg"></div>
+    </div>
+
+    <!-- Output -->
+    <div class="panel full">
+      <div class="panel-label" data-i18n="step3">03 · Generierter Prompt</div>
+
+      <!-- Tabs -->
+      <div id="outputTabs" style="display:none; margin-bottom:14px; display:none; gap:8px; flex-wrap:wrap;">
+        <button class="tab-btn active" id="tabTxt" onclick="switchTab('txt')" data-i18n="tabText">📄 Text Prompt</button>
+        <button class="tab-btn" id="tabAnalysis" onclick="switchTab('analysis')" data-i18n="tabAnalysis">🔎 Bildanalyse</button>
+        <button class="tab-btn" id="tabJson" onclick="switchTab('json')" data-i18n="tabJson">🗂 Strukturiertes JSON</button>
+      </div>
+
+      <div class="output-box" id="outputBox" spellcheck="false">
+        <span class="placeholder" data-i18n="placeholder">Lade ein Bild hoch und klicke auf „Prompt generieren" …</span>
+      </div>
+
+      <!-- Negative Prompt Editor -->
+      <div class="neg-prompt-area" id="negPromptArea">
+        <div class="neg-prompt-label" data-i18n="negLabel">Negative Prompt</div>
+        <textarea id="negPromptBox" spellcheck="false"></textarea>
+      </div>
+
+      <div id="variantsContainer" style="display:none">
+        <div class="panel-label" style="margin-top:20px" data-i18n="allVariants">Alle Varianten</div>
+        <div class="variants-grid" id="variantsGrid"></div>
+      </div>
+      <div class="output-actions" id="outputActions" style="display:none">
+        <button class="btn-secondary" id="copyBtn" onclick="copyPrompt()" data-i18n="copyBtn">📋 Kopieren</button>
+        <button class="btn-secondary" onclick="openFormatModal()" data-i18n="copyFormatBtn">⚙️ ComfyUI / A1111</button>
+        <button class="btn-secondary" id="editToggleBtn" onclick="toggleEdit()" data-i18n="editBtn">✏️ Bearbeiten</button>
+        <button class="btn-secondary" onclick="downloadTxt()" data-i18n="dlTxt">⬇ .txt</button>
+        <button class="btn-secondary" onclick="downloadJson()" data-i18n="dlJson">⬇ .json</button>
+        <button class="btn-secondary" onclick="generatePrompt()" data-i18n="regenBtn">🔄 Neu</button>
+      </div>
+
+      <!-- Prompt Variations -->
+      <div class="variations-area" id="variationsArea">
+        <div class="neg-prompt-label" data-i18n="variationsLabel">Prompt-Variationen</div>
+        <div class="variations-grid" id="variationsGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let imageBase64 = null;
+  let imageMediaType = null;
+  let currentPrompts = [];
+  let currentStructuredPrompt = null;
+  let currentImageAnalysis = null;
+  let selectedVariant = 0;
+  let imageReady = false;
+  let activeTab = 'txt';
+  let loraMode = 'lora';
+  let currentLang = 'de';
+
+  const translations = {
+    de: {
+      title: 'Prompt <span>Generator</span>',
+      step1: '01 · Bild hochladen',
+      step2: '02 · Optionen',
+      step3: '03 · Generierter Prompt',
+      dropTitle: 'Bild hier ablegen',
+      dropSub: 'oder klicken zum Auswählen',
+      removeBtn: '✕ Entfernen',
+      waitingImg: 'Warte auf Bild …',
+      labelStyle: 'Stil',
+      labelMood: 'Stimmung',
+      labelLight: 'Beleuchtung',
+      labelDetail: 'Detailgrad',
+      labelCamera: 'Kamera',
+      labelVariants: 'Varianten',
+      loraMode: 'Generierungsmodus',
+      loraWith: 'Mit LoRA',
+      loraWithDesc: 'Gesicht & Haare via LoRA',
+      loraWithout: 'Ohne LoRA',
+      loraWithoutDesc: 'Kompletter Charakter im Prompt',
+      groqLink: '→ kostenlos holen',
+      labelProvider: 'Anbieter',
+      labelModel: 'Modell',
+      ollamaServer: 'Ollama-Server',
+      ollamaModel: 'Lokales Ollama Vision-Modell',
+      ollamaRefresh: 'Modellliste neu laden',
+      ollamaChecking: 'Ollama wird geprüft …',
+      ollamaHint: 'Lokaler oder Netzwerk-Server · kein API-Key erforderlich',
+      generateBtn: '⚡ Prompt generieren',
+      analyzingBtn: 'Analysiere Bild …',
+      tabText: '📄 Text Prompt',
+      tabAnalysis: '🔎 Bildanalyse',
+      tabJson: '🗂 Strukturiertes JSON',
+      tabSubject: '👕 Person & Szene',
+      placeholder: 'Lade ein Bild hoch und klicke auf „Prompt generieren" …',
+      allVariants: 'Alle Varianten',
+      copyBtn: '📋 Kopieren',
+      copied: '✓ Kopiert!',
+      dlTxt: '⬇ .txt herunterladen',
+      dlJson: '⬇ .json herunterladen',
+      regenBtn: '🔄 Neu generieren',
+      editBtn: '✏️ Bearbeiten',
+      saveEditBtn: '💾 Speichern',
+      negLabel: 'Negative Prompt',
+      saveKey: 'API-Key speichern (verschlüsselt)',
+      batchLabel: 'Modus',
+      single: 'Einzeln',
+      batch: 'Batch',
+      batchDrop: 'Bilder hier ablegen',
+      batchDropSub: 'oder klicken · mehrere Bilder möglich',
+      batchRun: '⚡ Batch generieren',
+      batchDownload: '⬇ ZIP wird erstellt …',
+      historyTitle: 'Prompt-Verlauf',
+      historySubtitle: 'Die letzten 20 generierten Prompts',
+      historyBtnLabel: 'Verlauf',
+      variationsLabel: '✨ Prompt-Variationen',
+      copyFormatBtn: '⚙️ ComfyUI / A1111',
+      fmtTitle: 'Export Format',
+      fmtSubtitle: 'Prompt für ComfyUI, Automatic1111 oder FLUX formatieren',
+      fmtA1111Title: 'Automatic1111 / SD WebUI Format',
+      fmtA1111Desc: 'Kopiere Positive und Negative Prompt direkt in die entsprechenden Felder von Automatic1111 oder SD.Next.',
+      fmtComfyTitle: 'ComfyUI — CLIPTextEncode Node',
+      fmtComfyDesc: 'Füge dieses JSON als Input für CLIPTextEncode-Nodes ein.',
+      fmtFluxTitle: 'FLUX / Fooocus Format',
+      fmtFluxDesc: 'FLUX nutzt einen einzigen Prompt ohne Negative. Optimiert für natürliche Sprache ohne Gewichtungen.',
+      fmtPositive: 'Positive Prompt',
+      fmtNegative: 'Negative Prompt',
+      fmtSuggestedParams: 'Empfohlene Parameter',
+      fmtFluxTips: 'FLUX Tipps',
+      fmtCopyPos: '📋 Positive kopieren',
+      fmtCopyNeg: '📋 Negative kopieren',
+      fmtCopyComfy: '📋 ComfyUI JSON kopieren',
+      fmtCopyFlux: '📋 FLUX Prompt kopieren',
+      // select options
+      stylePhoto: 'Photorealistisch', styleOil: 'Ölgemälde', styleWater: 'Aquarell', styleSketch: 'Skizze / Zeichnung',
+      moodNeutral: 'Neutral', moodDramatic: 'Dramatisch', moodSerene: 'Ruhig / Friedlich', moodMysterious: 'Geheimnisvoll', moodEnergetic: 'Energetisch', moodMelancholic: 'Melancholisch', moodEpic: 'Episch',
+      lightNatural: 'Natürliches Licht', lightGolden: 'Goldene Stunde', lightStudio: 'Studio-Licht', lightNeon: 'Neon-Lichter', lightDramatic: 'Dramatische Schatten', lightSoft: 'Weiches Licht', lightBacklit: 'Gegenlicht',
+      detailVeryHigh: 'Sehr hoch (8K)', detailHigh: 'Hoch (4K)', detailMed: 'Mittel', detailMin: 'Stilisiert / Minimal',
+      camAuto: 'Automatisch', cam35: '35mm Objektiv', camWide: 'Weitwinkel', camAerial: 'Vogelperspektive', camCloseup: 'Nahaufnahme',
+      var1: '1 Prompt', var3: '3 Varianten', var5: '5 Varianten',
+      errNoKey: 'Bitte einen Groq API-Key eingeben.',
+      errParse: 'Antwort konnte nicht geparst werden. Bitte erneut versuchen.',
+      errNoPrompts: 'Keine Prompts erhalten.',
+      errCopy: 'Kopieren fehlgeschlagen.',
+      errOnlyImages: 'Bitte nur Bilddateien hochladen.',
+      errTooBig: 'Bild ist zu groß (max. 20 MB).',
+    },
+    en: {
+      title: 'Prompt <span>Generator</span>',
+      step1: '01 · Upload Image',
+      step2: '02 · Options',
+      step3: '03 · Generated Prompt',
+      dropTitle: 'Drop image here',
+      dropSub: 'or click to select',
+      removeBtn: '✕ Remove',
+      waitingImg: 'Waiting for image …',
+      labelStyle: 'Style',
+      labelMood: 'Mood',
+      labelLight: 'Lighting',
+      labelDetail: 'Detail Level',
+      labelCamera: 'Camera',
+      labelVariants: 'Variants',
+      loraMode: 'Generation Mode',
+      loraWith: 'With LoRA',
+      loraWithDesc: 'Face & hair via LoRA',
+      loraWithout: 'Without LoRA',
+      loraWithoutDesc: 'Full character in prompt',
+      groqLink: '→ get for free',
+      labelProvider: 'Provider',
+      labelModel: 'Model',
+      ollamaServer: 'Ollama server',
+      ollamaModel: 'Local Ollama vision model',
+      ollamaRefresh: 'Reload model list',
+      ollamaChecking: 'Checking Ollama …',
+      ollamaHint: 'Local or network server · no API key required',
+      generateBtn: '⚡ Generate Prompt',
+      analyzingBtn: 'Analysing image …',
+      tabText: '📄 Text Prompt',
+      tabAnalysis: '🔎 Image Analysis',
+      tabJson: '🗂 Structured JSON',
+      tabSubject: '👕 Person & Scene',
+      placeholder: 'Upload an image and click "Generate Prompt" …',
+      allVariants: 'All Variants',
+      copyBtn: '📋 Copy',
+      copied: '✓ Copied!',
+      dlTxt: '⬇ Download .txt',
+      dlJson: '⬇ Download .json',
+      regenBtn: '🔄 Regenerate',
+      editBtn: '✏️ Edit',
+      saveEditBtn: '💾 Save',
+      negLabel: 'Negative Prompt',
+      saveKey: 'Save API key (encrypted)',
+      batchLabel: 'Mode',
+      single: 'Single',
+      batch: 'Batch',
+      batchDrop: 'Drop images here',
+      batchDropSub: 'or click · multiple files supported',
+      batchRun: '⚡ Run Batch',
+      batchDownload: '⬇ Creating ZIP …',
+      historyTitle: 'Prompt History',
+      historySubtitle: 'Last 20 generated prompts',
+      historyBtnLabel: 'History',
+      variationsLabel: '✨ Prompt Variations',
+      copyFormatBtn: '⚙️ ComfyUI / A1111',
+      fmtTitle: 'Export Format',
+      fmtSubtitle: 'Format prompt for ComfyUI, Automatic1111 or FLUX',
+      fmtA1111Title: 'Automatic1111 / SD WebUI Format',
+      fmtA1111Desc: 'Copy positive and negative prompt directly into the respective fields of Automatic1111 or SD.Next.',
+      fmtComfyTitle: 'ComfyUI — CLIPTextEncode Node',
+      fmtComfyDesc: 'Paste this JSON as input for CLIPTextEncode nodes.',
+      fmtFluxTitle: 'FLUX / Fooocus Format',
+      fmtFluxDesc: 'FLUX uses a single prompt without negatives. Optimised for natural language without weights.',
+      fmtPositive: 'Positive Prompt',
+      fmtNegative: 'Negative Prompt',
+      fmtSuggestedParams: 'Suggested Parameters',
+      fmtFluxTips: 'FLUX Tips',
+      fmtCopyPos: '📋 Copy Positive',
+      fmtCopyNeg: '📋 Copy Negative',
+      fmtCopyComfy: '📋 Copy ComfyUI JSON',
+      fmtCopyFlux: '📋 Copy FLUX Prompt',
+      // select options
+      stylePhoto: 'Photorealistic', styleOil: 'Oil Painting', styleWater: 'Watercolor', styleSketch: 'Sketch / Drawing',
+      moodNeutral: 'Neutral', moodDramatic: 'Dramatic', moodSerene: 'Serene / Peaceful', moodMysterious: 'Mysterious', moodEnergetic: 'Energetic', moodMelancholic: 'Melancholic', moodEpic: 'Epic',
+      lightNatural: 'Natural Light', lightGolden: 'Golden Hour', lightStudio: 'Studio Lighting', lightNeon: 'Neon Lights', lightDramatic: 'Dramatic Shadows', lightSoft: 'Soft Diffused Light', lightBacklit: 'Backlit',
+      detailVeryHigh: 'Very High (8K)', detailHigh: 'High (4K)', detailMed: 'Medium', detailMin: 'Stylized / Minimal',
+      camAuto: 'Auto', cam35: '35mm Lens', camWide: 'Wide Angle', camAerial: 'Aerial View', camCloseup: 'Close-up Portrait',
+      var1: '1 Prompt', var3: '3 Variants', var5: '5 Variants',
+      errNoKey: 'Please enter a Groq API key.',
+      errParse: 'Could not parse response. Please try again.',
+      errNoPrompts: 'No prompts received.',
+      errCopy: 'Copy failed.',
+      errOnlyImages: 'Please upload image files only.',
+      errTooBig: 'Image too large (max 20 MB).',
+    }
+  };
+
+  function t(key) {
+    return (translations[currentLang] || translations.de)[key] || key;
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>'"]/g, char => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    })[char]);
+  }
+
+  function setLang(lang) {
+    currentLang = lang;
+    localStorage.setItem('pg-lang', lang);
+    document.documentElement.lang = lang;
+    document.getElementById('btnDe').classList.toggle('active', lang === 'de');
+    document.getElementById('btnEn').classList.toggle('active', lang === 'en');
+    applyLang();
+  }
+
+  function applyLang() {
+    // Elements with data-i18n
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      const val = t(key);
+      if (key === 'title') { el.innerHTML = val; return; }
+      el.textContent = val;
+    });
+    // Select options with data-i18n-opt
+    document.querySelectorAll('[data-i18n-opt]').forEach(el => {
+      const key = el.getAttribute('data-i18n-opt');
+      el.textContent = t(key);
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+      el.title = t(el.getAttribute('data-i18n-title'));
+    });
+    // Dynamic elements
+    if (!imageReady) {
+      document.getElementById('uploadStatus').textContent = t('waitingImg');
+    }
+    document.getElementById('btnLabel').textContent = t('generateBtn');
+  }
+
+  // ── Provider / Model config ────────────────────────────────────────────────
+  const MODEL_INFO = {
+    'meta-llama/llama-4-scout-17b-16e-instruct': {
+      name: 'Llama 4 Scout 17B',
+      provider: 'Groq',
+      desc: { de: 'Das einzige verfügbare Vision-Modell auf Groq (Stand März 2026). Ultraschnell, multimodal, ideal für Bildanalysen. Llama 4 Maverick wurde deprecated — Scout ist der einzige Groq-VLM.', en: 'The only available vision model on Groq (as of March 2026). Ultra-fast, multimodal, ideal for image analysis. Llama 4 Maverick was deprecated — Scout is the sole Groq VLM.' },
+      tags: [['⭐ Einziger Groq VLM','green'],['⚡ Ultraschnell',''],['Kostenlos','green'],['Vision','purple']]
+    },
+    'qwen/qwen2.5-vl-72b-instruct:free': {
+      name: 'Qwen 2.5 VL 72B',
+      provider: 'OpenRouter (Free)',
+      desc: { de: '72B-Parameter Vision-Modell von Alibaba. Sehr detaillierte Bild- und Szenenanalyse, besonders stark bei Textverständnis und Komposition.', en: '72B parameter vision model by Alibaba. Very detailed image and scene analysis, especially strong at text understanding and composition.' },
+      tags: [['⭐ Empfohlen','green'],['72B Params','purple'],['Kostenlos','green'],['200 req/Tag','']]
+    },
+    'qwen/qwen2.5-vl-32b-instruct:free': {
+      name: 'Qwen 2.5 VL 32B',
+      provider: 'OpenRouter (Free)',
+      desc: { de: 'Kompaktere 32B-Version von Qwen VL. Gute Balance zwischen Qualität und Geschwindigkeit.', en: 'Compact 32B version of Qwen VL. Good balance between quality and speed.' },
+      tags: [['32B Params','purple'],['Kostenlos','green'],['200 req/Tag','']]
+    },
+    'google/gemma-3-27b-it:free': {
+      name: 'Gemma 3 27B',
+      provider: 'OpenRouter (Free) · Google',
+      desc: { de: 'Googles offenes Multimodal-Modell mit 128K Kontext. Sehr gut für detaillierte Umgebungsanalysen und strukturierte Ausgaben.', en: 'Google\'s open multimodal model with 128K context. Very good for detailed environment analysis and structured output.' },
+      tags: [['128K Kontext','green'],['Google','purple'],['Kostenlos','green'],['Multimodal','']]
+    },
+    'meta-llama/llama-3.2-11b-vision-instruct:free': {
+      name: 'Llama 3.2 Vision 11B',
+      provider: 'OpenRouter (Free)',
+      desc: { de: 'Kompaktes 11B Vision-Modell von Meta. Gute Bildverständnis-Fähigkeiten bei niedrigem Ressourcenverbrauch.', en: 'Compact 11B vision model from Meta. Good image understanding capabilities with low resource usage.' },
+      tags: [['11B Params',''],['Kostenlos','green'],['Schnell','']]
+    },
+    'mistralai/mistral-small-3.1-24b-instruct:free': {
+      name: 'Mistral Small 3.1 24B',
+      provider: 'OpenRouter (Free)',
+      desc: { de: '24B multimodales Modell von Mistral AI. 128K Kontext, stark bei präzisen Beschreibungen und strukturierter JSON-Ausgabe.', en: '24B multimodal model by Mistral AI. 128K context, strong at precise descriptions and structured JSON output.' },
+      tags: [['128K Kontext','green'],['Mistral','purple'],['Kostenlos','green'],['24B Params','']]
+    },
+    'moonshotai/kimi-vl-a3b-thinking:free': {
+      name: 'Kimi VL A3B Thinking',
+      provider: 'OpenRouter (Free)',
+      desc: { de: 'Reasoning-optimiertes Vision-Modell von Moonshot AI. Denkt Schritt für Schritt – ideal für komplexe Szenenanalysen.', en: 'Reasoning-optimized vision model by Moonshot AI. Thinks step by step – ideal for complex scene analysis.' },
+      tags: [['Reasoning','purple'],['Kostenlos','green'],['Thinking Mode','']]
+    },
+    'gemini-2.5-flash-preview-04-17': {
+      name: 'Gemini 2.5 Flash',
+      provider: 'Google AI Studio',
+      desc: { de: 'Googles schnellstes multimodales Modell mit 1M Token Kontext. Exzellente Bildanalyse und strukturierte Ausgaben. 250 Anfragen/Tag gratis.', en: 'Google\'s fastest multimodal model with 1M token context. Excellent image analysis and structured output. 250 requests/day free.' },
+      tags: [['⭐ Empfohlen','green'],['1M Kontext','purple'],['250 req/Tag',''],['Gemini 2.5','']]
+    },
+    'gemini-2.0-flash': {
+      name: 'Gemini 2.0 Flash',
+      provider: 'Google AI Studio',
+      desc: { de: 'Sehr schnelles und fähiges Modell der Gemini-2.0-Generation. 1500 kostenlose Anfragen pro Tag, ideal für intensiven Einsatz.', en: 'Very fast and capable Gemini 2.0 generation model. 1500 free requests per day, ideal for intensive use.' },
+      tags: [['1500 req/Tag','green'],['1M Kontext','purple'],['Gemini 2.0','']]
+    },
+    'gemini-1.5-flash': {
+      name: 'Gemini 1.5 Flash',
+      provider: 'Google AI Studio',
+      desc: { de: 'Bewährtes Gemini 1.5 Flash-Modell mit großzügigem Freikontingent. Stabil und zuverlässig für Bildanalysen.', en: 'Proven Gemini 1.5 Flash model with generous free quota. Stable and reliable for image analysis.' },
+      tags: [['1500 req/Tag','green'],['1M Kontext',''],['Stabil','']]
+    }
+  };
+
+  const PROVIDERS = {
+    groq: {
+      name: 'Groq',
+      keyPlaceholder: 'gsk_...',
+      keyLink: 'https://console.groq.com/keys',
+      keyLinkText: { de: '→ kostenlos holen', en: '→ get for free' },
+      models: [
+        { id: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout 17B ⭐ (einziges Vision-Modell)' },
+      ]
+    },
+    openrouter: {
+      name: 'OpenRouter',
+      keyPlaceholder: 'sk-or-...',
+      keyLink: 'https://openrouter.ai/keys',
+      keyLinkText: { de: '→ kostenlos holen', en: '→ get for free' },
+      models: [
+        { id: 'qwen/qwen2.5-vl-72b-instruct:free',             label: 'Qwen 2.5 VL 72B ⭐ (empfohlen)' },
+        { id: 'qwen/qwen2.5-vl-32b-instruct:free',             label: 'Qwen 2.5 VL 32B' },
+        { id: 'google/gemma-3-27b-it:free',                    label: 'Gemma 3 27B (Google)' },
+        { id: 'meta-llama/llama-3.2-11b-vision-instruct:free', label: 'Llama 3.2 Vision 11B' },
+        { id: 'mistralai/mistral-small-3.1-24b-instruct:free', label: 'Mistral Small 3.1 24B' },
+        { id: 'moonshotai/kimi-vl-a3b-thinking:free',          label: 'Kimi VL A3B Thinking' },
+      ]
+    },
+    google: {
+      name: 'Google AI Studio',
+      keyPlaceholder: 'AIza...',
+      keyLink: 'https://aistudio.google.com/apikey',
+      keyLinkText: { de: '→ kostenlos holen', en: '→ get for free' },
+      models: [
+        { id: 'gemini-2.5-flash-preview-04-17', label: 'Gemini 2.5 Flash ⭐ (250 req/Tag)' },
+        { id: 'gemini-2.0-flash',               label: 'Gemini 2.0 Flash (1500 req/Tag)' },
+        { id: 'gemini-1.5-flash',               label: 'Gemini 1.5 Flash (1500 req/Tag)' },
+      ]
+    }
+  };
+
+  function updateModelInfo() {
+    const modelId = document.getElementById('modelOpt').value;
+    const info = MODEL_INFO[modelId];
+    if (!info) return;
+    document.getElementById('ttName').textContent = info.name;
+    document.getElementById('ttProvider').textContent = info.provider;
+    document.getElementById('ttDesc').textContent = info.desc[currentLang] || info.desc.de;
+    document.getElementById('ttTags').innerHTML = info.tags.map(([label, cls]) =>
+      `<span class="tooltip-tag ${cls}">${label}</span>`
+    ).join('');
+  }
+
+  function onProviderChange() {
+    const provider = document.getElementById('providerOpt').value;
+    localStorage.setItem('pg-provider', provider);
+    const cfg = PROVIDERS[provider];
+    const modelSel = document.getElementById('modelOpt');
+    modelSel.innerHTML = cfg.models.map(m => `<option value="${m.id}">${m.label}</option>`).join('');
+    document.getElementById('groqKey').placeholder = cfg.keyPlaceholder;
+    // Only clear if no saved key for this provider
+    const shouldSave = localStorage.getItem('pg-savekey') === '1';
+    const savedEnc = localStorage.getItem(`pg-key-${provider}`);
+    if (shouldSave && savedEnc) {
+      document.getElementById('groqKey').value = xorDecode(savedEnc);
+    } else {
+      document.getElementById('groqKey').value = '';
+    }
+    document.getElementById('apiKeyLink').href = cfg.keyLink;
+    document.getElementById('apiKeyLink').textContent = cfg.keyLinkText[currentLang] || cfg.keyLinkText.de;
+    document.getElementById('apiKeyLabel').childNodes[0].textContent = `${cfg.name} API-Key `;
+    updateModelInfo();
+    checkReady();
+  }
+
+  async function callVLM(modelId, prompt, imgBase64, schema = null) {
+    const fullPrompt = prompt + '\n\nIMPORTANT: Return ONLY valid JSON. No markdown, no code fences, no explanations. Start your response with { and end with }.';
+    const payload = { serverUrl: getOllamaServer(), model: modelId, prompt: fullPrompt, image: imgBase64, schema };
+
+    // The Windows app routes requests through Electron, avoiding browser CORS.
+    if (window.ollamaDesktop?.chat) {
+      const data = await window.ollamaDesktop.chat(payload);
+      return { ok: true, status: 200, json: async () => data };
+    }
+
+    // Browser fallback for development (requires Ollama to allow this origin).
+    return fetch(`${getOllamaServer()}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: modelId,
+        stream: false,
+        think: false,
+        format: schema || 'json',
+        options: { temperature: 0.4, num_predict: 4096 },
+        messages: [{ role: 'user', content: fullPrompt, ...(imgBase64 ? { images: [imgBase64] } : {}) }]
+      })
+    });
+  }
+
+  function setLoraMode(mode) {
+    loraMode = mode;
+    document.getElementById('btnLora').classList.toggle('active', mode === 'lora');
+    document.getElementById('btnNoLora').classList.toggle('active', mode === 'nolora');
+  }
+
+  function checkReady() {
+    const btn = document.getElementById('generateBtn');
+    const model = document.getElementById('ollamaModel').value.trim();
+    btn.disabled = !(imageReady && model);
+  }
+
+  // Drop zone setup
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) handleFile(fileInput.files[0]);
+  });
+
+  function handleFile(file) {
+    if (!file.type.startsWith('image/')) return showError(t('errOnlyImages'));
+    if (file.size > 20 * 1024 * 1024) return showError(t('errTooBig'));
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      const dataUrl = e.target.result;
+      imageBase64 = dataUrl.split(',')[1];
+      imageMediaType = file.type;
+
+      dropZone.classList.add('has-image');
+      let img = dropZone.querySelector('img');
+      if (!img) { img = document.createElement('img'); dropZone.prepend(img); }
+      img.src = dataUrl;
+
+      dropZone.querySelector('.drop-icon').style.display = 'none';
+      dropZone.querySelector('.drop-text').style.display = 'none';
+
+      imageReady = true;
+      setUploadStatus('ready', `${file.name} · ${(file.size/1024).toFixed(0)} KB`);
+      checkReady();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearImage(e) {
+    e.stopPropagation();
+    imageBase64 = null; imageMediaType = null; imageReady = false;
+    dropZone.classList.remove('has-image');
+    const img = dropZone.querySelector('img');
+    if (img) img.remove();
+    dropZone.querySelector('.drop-icon').style.display = '';
+    dropZone.querySelector('.drop-text').style.display = '';
+    fileInput.value = '';
+    setUploadStatus('', 'Warte auf Bild …');
+    checkReady();
+  }
+
+  function setUploadStatus(state, text) {
+    const dot = document.getElementById('uploadDot');
+    dot.className = 'status-dot' + (state ? ' ' + state : '');
+    document.getElementById('uploadStatus').textContent = text;
+  }
+
+  const IMAGE_ANALYSIS_SCHEMA = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['summary','medium','subjects','scene','composition','camera','lighting','colors','materials_and_textures','visible_text','visual_style','uncertain_details'],
+    properties: {
+      summary: { type: 'string' },
+      medium: { type: 'string' },
+      subjects: { type: 'array', items: { type: 'object', additionalProperties: true } },
+      scene: { type: 'string' },
+      composition: { type: 'string' },
+      camera: { type: 'string' },
+      lighting: { type: 'string' },
+      colors: { type: 'array', items: { type: 'string' } },
+      materials_and_textures: { type: 'array', items: { type: 'string' } },
+      visible_text: { type: 'array', items: { type: 'string' } },
+      visual_style: { type: 'string' },
+      uncertain_details: { type: 'array', items: { type: 'string' } }
+    }
+  };
+
+  const KREA2_RESULT_SCHEMA = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['target_model','generation_mode','positive_prompt','negative_prompt','fidelity_notes'],
+    properties: {
+      target_model: { type: 'string', enum: ['Krea 2'] },
+      generation_mode: { type: 'string', enum: ['with_lora','without_lora'] },
+      positive_prompt: { type: 'string' },
+      negative_prompt: { type: 'string' },
+      fidelity_notes: { type: 'string' }
+    }
+  };
+
+  const VARIATION_RESULT_SCHEMA = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['positive_prompt','negative_prompt','variation_applied'],
+    properties: {
+      positive_prompt: { type: 'string' },
+      negative_prompt: { type: 'string' },
+      variation_applied: { type: 'string' }
+    }
+  };
+
+  function buildImageAnalysisPrompt() {
+    return `Analyze the attached image factually and precisely. Report only details that are actually visible; never invent a person, object, text, location, material, color, camera property, or mood. If a detail is unclear, put it in uncertain_details instead of guessing.
+
+Return a JSON object with exactly these keys and value types:
+- summary: string, one literal overview sentence
+- medium: string, e.g. photo, screenshot, illustration, render
+- subjects: array of objects describing each visible subject, appearance, clothing, pose/action, expression and position
+- scene: string describing the real environment and visible objects
+- composition: string describing framing, viewpoint, spatial layout and depth
+- camera: string containing only visually supportable lens/shot/depth-of-field properties
+- lighting: string describing sources, direction, hardness and contrast
+- colors: array of dominant and accent colors
+- materials_and_textures: array of visible materials and textures
+- visible_text: array containing only text that can actually be read
+- visual_style: string describing the observed aesthetic without adding improvements
+- uncertain_details: array of anything ambiguous
+
+Return only valid JSON.`;
+  }
+
+  function buildKrea2PromptRequest(analysis, preferences) {
+    const modeRule = preferences.isLora
+      ? 'LoRA mode: omit facial identity, facial features, skin description and hair description from the generation prompt. Preserve clothing, build, pose and scene.'
+      : 'Full-character mode: include visible face, skin, hair, expression and identity-neutral appearance details when present in the analysis.';
+    return `You are writing a production prompt specifically for the Krea 2 image model.
+
+Use only the factual image analysis below. Preserve the actual subject, action, scene, framing, object placement, lighting and palette. Do not add objects, locations, people, weather, text or cinematic effects that are absent from the analysis.
+
+Krea 2 prompt rules:
+- Write one clear natural-language prompt of 45 to 100 words, not a comma-separated keyword dump.
+- Begin with the observed medium/style and shot or composition, then describe subject/action, environment, lighting, palette and textures.
+- Give explicit aesthetic direction, but do not use generic filler such as masterpiece, best quality, 8K or award-winning.
+- Apply these requested controls only where they do not contradict the image: style=${preferences.style}; mood=${preferences.mood}; lighting=${preferences.light}; detail=${preferences.detail}; camera=${preferences.camera || 'preserve observed framing'}.
+- ${modeRule}
+
+FACTUAL IMAGE ANALYSIS:
+${JSON.stringify(analysis)}
+
+Return only valid JSON with these keys:
+- target_model: the string "Krea 2"
+- generation_mode: "with_lora" or "without_lora"
+- positive_prompt: the finished Krea 2 prompt
+- negative_prompt: a short list of only likely defects or unwanted deviations
+- fidelity_notes: a short sentence naming the most important details that must remain faithful to the source image.`;
+  }
+
+  async function parseOllamaJson(response) {
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || error.error || `Ollama HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    const content = data.message?.content?.trim() || '';
+    const thinking = data.message?.thinking?.trim() || '';
+    const raw = content || thinking;
+    const cleaned = raw.replace(/```json|```/gi, '').trim();
+    try {
+      return JSON.parse(cleaned);
+    } catch {
+      const start = cleaned.indexOf('{');
+      const end = cleaned.lastIndexOf('}');
+      if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1));
+      throw new Error(t('errParse'));
+    }
+  }
+
+  async function generateKrea2Result(modelId, imgBase64, preferences) {
+    const analysisResponse = await callVLM(modelId, buildImageAnalysisPrompt(), imgBase64, IMAGE_ANALYSIS_SCHEMA);
+    const analysis = await parseOllamaJson(analysisResponse);
+    const promptResponse = await callVLM(modelId, buildKrea2PromptRequest(analysis, preferences), null, KREA2_RESULT_SCHEMA);
+    const result = await parseOllamaJson(promptResponse);
+    if (!result.positive_prompt || typeof result.positive_prompt !== 'string') throw new Error(t('errNoPrompts'));
+    result.target_model = 'Krea 2';
+    result.generation_mode = preferences.isLora ? 'with_lora' : 'without_lora';
+    result.image_analysis = analysis;
+    return { analysis, result };
+  }
+
+  async function generatePrompt() {
+    if (!imageBase64) return;
+
+    const style = document.getElementById('styleOpt').value;
+    const mood = document.getElementById('moodOpt').value;
+    const light = document.getElementById('lightOpt').value;
+    const detail = document.getElementById('detailOpt').value;
+    const camera = document.getElementById('cameraOpt').value;
+    const variants = parseInt(document.getElementById('variantsOpt').value);
+
+    setLoading(true);
+    hideError();
+
+    const cameraStr = camera ? `, ${camera}` : '';
+    const skinRealismEnhancement = `enhance facial skin realism while preserving all facial features and expressions, maintain natural texture and pores, improve lighting balance and tone, refine skin color depth without over-smoothing, visible pores, skin texture, small natural imperfections, micro-details, subtle light reflection shine in eyes with natural moisture not tears, flyaway hairs, baby hairs catching light, stray strands at hairline, subsurface scattering, light glowing through skin edges, organic texture, ultra-realistic photo-quality finish`;
+
+    const isLora = loraMode === 'lora';
+
+    const personBlockLora = `
+STRICT RULES — what to INCLUDE:
+- Scene: architecture, space, objects, materials, surfaces, colors, lighting, atmosphere, depth, textures
+- Person: clothing (every garment in full detail — fabric, color, fit, style, condition), body stature/build, pose (exact body position, limb placement, weight distribution, gestures)
+
+STRICT RULES — what to EXCLUDE completely (LoRA will handle these):
+- NO face description whatsoever
+- NO skin description
+- NO hair description (color, texture, length, style)
+- NO eye color or facial features
+- NO head description beyond general head tilt direction
+
+PERSON ANALYSIS (NO face/skin/hair):
+- Clothing: every visible garment — fabric texture, exact colors, fit, style, brand indicators, condition, layering
+- Stature & build: body type, height impression, shoulder width, overall physique
+- Pose: exact body position, arms, hands, legs, feet, torso angle, head tilt direction only, weight distribution, pose energy
+- Spatial relation to scene`;
+
+    const personBlockNoLora = `
+FULL CHARACTER ANALYSIS — describe everything about the person in extreme detail, including:
+- Face: face shape, facial structure, facial proportions, expression, eye shape and color, eyebrow shape, nose shape, lip shape and fullness, jaw and cheekbone structure, any distinctive features (freckles, dimples, moles, etc.)
+- Skin: exact skin tone and undertone (e.g. warm medium-brown, light olive, fair with pink undertones), skin texture, complexion
+- Hair: color (precise, including highlights/lowlights), texture (straight, wavy, curly, coily), length, style, how it falls, any flyaways or baby hairs
+- Clothing: every visible garment — fabric texture, exact colors, fit, style, brand indicators, condition, layering
+- Stature & build: body type, height impression, shoulder width, overall physique
+- Pose: exact body position, arms, hands, legs, feet, torso angle, head position, weight distribution, pose energy, gaze direction
+- Spatial relation to scene
+- Age range, overall energy and presence`;
+
+    const jsonPersonLora = `"person": {
+    "mode": "LoRA — face and hair excluded from prompt",
+    "stature_and_build": "...",
+    "clothing": {
+      "top": "...",
+      "bottom": "...",
+      "outerwear": "...",
+      "footwear": "...",
+      "accessories": "...",
+      "overall_style": "..."
+    },
+    "pose": {
+      "body_position": "...",
+      "arms_and_hands": "...",
+      "legs_and_feet": "...",
+      "torso_angle": "...",
+      "head_direction": "...",
+      "weight_distribution": "...",
+      "pose_energy": "..."
+    },
+    "spatial_relation_to_scene": "..."
+  },`;
+
+    const jsonPersonNoLora = `"person": {
+    "mode": "Full character — no LoRA",
+    "stature_and_build": "...",
+    "age_range": "...",
+    "presence_and_energy": "...",
+    "face": {
+      "face_shape": "...",
+      "facial_structure": "...",
+      "expression": "...",
+      "eyes": "...",
+      "eyebrows": "...",
+      "nose": "...",
+      "lips": "...",
+      "jaw_and_cheekbones": "...",
+      "distinctive_features": "..."
+    },
+    "skin": {
+      "tone": "...",
+      "undertone": "...",
+      "texture": "...",
+      "complexion": "..."
+    },
+    "hair": {
+      "color": "...",
+      "texture": "...",
+      "length": "...",
+      "style": "...",
+      "details": "..."
+    },
+    "clothing": {
+      "top": "...",
+      "bottom": "...",
+      "outerwear": "...",
+      "footwear": "...",
+      "accessories": "...",
+      "overall_style": "..."
+    },
+    "pose": {
+      "body_position": "...",
+      "arms_and_hands": "...",
+      "legs_and_feet": "...",
+      "torso_angle": "...",
+      "head_position": "...",
+      "gaze_direction": "...",
+      "weight_distribution": "...",
+      "pose_energy": "..."
+    },
+    "spatial_relation_to_scene": "..."
+  },`;
+
+    const positivePromptInstrLora = `exhaustive comma-separated prompt describing the person (clothing, stature, pose — NO face/hair/skin, LoRA handles those) + full scene/environment/lighting/atmosphere/textures/colors + full realism enhancement. 160-220 words. Do NOT mention face, hair, or skin.`;
+    const positivePromptInstrNoLora = `exhaustive comma-separated prompt describing the COMPLETE character (face, skin, hair, clothing, stature, pose, expression, gaze) + full scene/environment/lighting/atmosphere/textures/colors + full realism enhancement. 180-250 words. Include every facial, skin, and hair detail.`;
+    const negativePromptLora = `face focus, portrait close-up, facial features, skin texture, hair detail, blur, low quality, distorted, deformed, cartoon, anime, watermark, text, overexposed, flat lighting, airbrushed`;
+    const negativePromptNoLora = `blur, low quality, distorted, deformed, cartoon, anime, illustration, watermark, text, overexposed, flat lighting, airbrushed, plastic skin, over-smoothed, poreless skin, glassy eyes, fake hair, unnatural texture`;
+
+    const userPrompt = `You are an expert AI image prompt engineer specializing in photorealistic image generation for the Chroma1-HD diffusion model.
+
+TASK: Analyze this image in extreme detail. Generate a structured JSON prompt for Chroma1-HD.
+MODE: ${isLora ? 'WITH LORA — face and hair are handled by a separate LoRA, exclude them from the prompt' : 'WITHOUT LORA — describe the complete character including face, skin, and hair in full detail'}
+${isLora ? personBlockLora : personBlockNoLora}
+
+SCENE ANALYSIS — describe in maximum detail:
+- Overall environment type (indoor/outdoor, room type, location)
+- Architecture & structural elements (walls, floors, ceiling, windows, doors, etc.)
+- All visible objects and props (materials, colors, shapes, condition)
+- Surface textures and materials
+- Color palette — dominant, accent, shadows, highlights
+- Lighting — direction, quality, color temperature, shadows, reflections, all light sources
+- Depth & spatial composition — foreground, midground, background
+- Atmosphere, mood, time of day, weather if visible
+
+REALISM ENHANCEMENT (always apply): ${skinRealismEnhancement}
+
+User style preferences: style=${style}, mood=${mood}, lighting emphasis=${light}, detail=${detail}${cameraStr ? ', camera: ' + cameraStr : ''}.
+
+OUTPUT FORMAT — return ONLY this JSON, no markdown, no extra text:
+{
+  "model": "Chroma1-HD",
+  "generation_mode": "${isLora ? 'with_lora' : 'without_lora'}",
+  "version": "1.0",
+  ${isLora ? jsonPersonLora : jsonPersonNoLora}
+  "scene": {
+    "environment_type": "...",
+    "setting_description": "...",
+    "architecture": "...",
+    "foreground": "...",
+    "midground": "...",
+    "background": "...",
+    "depth_layers": "..."
+  },
+  "objects_and_props": {
+    "main_elements": ["..."],
+    "secondary_elements": ["..."],
+    "surface_details": "...",
+    "materials": ["..."]
+  },
+  "colors": {
+    "dominant": "...",
+    "accent": "...",
+    "shadows": "...",
+    "highlights": "...",
+    "overall_palette": "..."
+  },
+  "lighting": {
+    "type": "...",
+    "direction": "...",
+    "quality": "...",
+    "color_temperature": "...",
+    "shadows": "...",
+    "reflections": "...",
+    "light_sources": ["..."],
+    "atmosphere": "..."
+  },
+  "textures_and_surfaces": {
+    "floor": "...",
+    "walls": "...",
+    "ceiling": "...",
+    "other_surfaces": "..."
+  },
+  "atmosphere": {
+    "mood": "...",
+    "time_of_day": "...",
+    "weather_or_conditions": "...",
+    "spatial_feeling": "..."
+  },
+  "style": {
+    "render_style": "${style}",
+    "mood_enhancement": "${mood}",
+    "detail_level": "${detail}",
+    "realism_notes": "${skinRealismEnhancement}"
+  },
+  "positive_prompt": "${isLora ? positivePromptInstrLora : positivePromptInstrNoLora}",
+  "negative_prompt": "${isLora ? negativePromptLora : negativePromptNoLora}"
+}`;
+
+    try {
+      const modelId = getOllamaModel();
+      const generated = await generateKrea2Result(modelId, imageBase64, {
+        style, mood, light, detail, camera, isLora
+      });
+      const parsed = generated.result;
+      currentImageAnalysis = generated.analysis;
+
+      // Store full structured result
+      currentStructuredPrompt = parsed;
+      currentPrompts = [parsed.positive_prompt || JSON.stringify(parsed, null, 2)];
+      selectedVariant = 0;
+      saveToHistory(parsed);
+      renderOutput();
+
+    } catch (err) {
+      showError(err.message || 'Unbekannter Fehler.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function renderOutput() {
+    const outputBox = document.getElementById('outputBox');
+    const variantsContainer = document.getElementById('variantsContainer');
+    const outputActions = document.getElementById('outputActions');
+    const tabs = document.getElementById('outputTabs');
+
+    tabs.style.display = 'flex';
+    variantsContainer.style.display = 'none';
+    outputActions.style.display = '';
+    outputBox.classList.add('active');
+    outputBox.contentEditable = 'false';
+    editMode = false;
+    const editBtn = document.getElementById('editToggleBtn');
+    if (editBtn) { editBtn.textContent = t('editBtn'); editBtn.style.borderColor=''; editBtn.style.color=''; }
+
+    showNegPrompt();
+    renderVariations();
+    switchTab(activeTab);
+  }
+
+  // ── Prompt Variations ─────────────────────────────────────────────────────
+  const VARIATIONS = [
+    { id:'dramatic',   icon:'🎭', labelDe:'Dramatischer',    labelEn:'More Dramatic',     descDe:'Intensivere Stimmung',  descEn:'More intense mood',     tweak: 'Make the mood dramatically more intense, increase contrast, add more tension and cinematic drama. Emphasize dark shadows and bold highlights.' },
+    { id:'serene',     icon:'🌿', labelDe:'Ruhiger',         labelEn:'More Serene',        descDe:'Ruhigere Atmosphäre',   descEn:'Calmer atmosphere',     tweak: 'Make the atmosphere much more calm, peaceful and serene. Soften lighting, add tranquility, reduce tension.' },
+    { id:'cinematic',  icon:'🎬', labelDe:'Cinematischer',   labelEn:'More Cinematic',     descDe:'Filmischer Look',       descEn:'Film-like look',         tweak: 'Apply a strong cinematic look: anamorphic lens flares, film grain, movie color grading, letterbox framing feel, cinematic depth of field.' },
+    { id:'wideangle',  icon:'🔭', labelDe:'Weitwinkel',      labelEn:'Wide Angle',         descDe:'Weitwinkel-Perspektive',descEn:'Wide angle view',        tweak: 'Change the camera to a dramatic wide angle shot, show much more of the environment, emphasize space and scale.' },
+    { id:'closeup',    icon:'🔍', labelDe:'Nahaufnahme',     labelEn:'Close-up',           descDe:'Detaillierte Nahsicht', descEn:'Detailed close view',   tweak: 'Reframe as a tight close-up portrait shot, 85mm lens, shallow depth of field f/1.4, background beautifully blurred.' },
+    { id:'golden',     icon:'🌅', labelDe:'Goldene Stunde',  labelEn:'Golden Hour',        descDe:'Warmes Abendlicht',     descEn:'Warm evening light',    tweak: 'Transform lighting to golden hour: warm amber and orange tones, long soft shadows, glowing light catching surfaces and edges.' },
+    { id:'neon',       icon:'🌃', labelDe:'Neon / Night',    labelEn:'Neon / Night',       descDe:'Neon-Nachtästhetik',    descEn:'Neon night aesthetic',  tweak: 'Transform to a moody nighttime neon aesthetic: vibrant neon lights in cyan, magenta and purple, wet reflective surfaces, high contrast.' },
+    { id:'minimal',    icon:'⬜', labelDe:'Minimalistisch',  labelEn:'Minimalist',         descDe:'Klare, reduzierte Form',descEn:'Clean, reduced look',   tweak: 'Reduce to a minimalist aesthetic: clean background, minimal props, lots of negative space, simple elegant composition.' },
+    { id:'vintage',    icon:'📷', labelDe:'Vintage / Film',  labelEn:'Vintage / Film',     descDe:'Analoger Film-Look',    descEn:'Analog film look',      tweak: 'Apply a vintage analog film aesthetic: grain, slight color fade, warm tones, vignetting, like a 35mm film photograph from the 1970s.' },
+    { id:'epic',       icon:'⚡', labelDe:'Episch',          labelEn:'Epic',               descDe:'Epische Grandiosität',  descEn:'Epic grandeur',         tweak: 'Make everything epic: dramatic storm clouds, heroic pose emphasis, strong rim lighting, vast scale, powerful atmosphere.' },
+    { id:'iphone-selfie', icon:'🤳', labelDe:'iPhone Selfie', labelEn:'iPhone Selfie',      descDe:'Amateur-Selfie aus Armlänge', descEn:'Amateur arm-length selfie', tweak: 'Reframe as a casual amateur arm-length selfie captured from the point of view of an iPhone 17 Pro front-facing camera. The subject holds the camera at arm length, with mild front-camera wide-angle perspective, slightly imperfect off-center framing, a casual spontaneous expression, uneven available light, subtle sensor noise and slight motion softness. It must look like an ordinary unpolished personal snapshot, not a professional portrait. The phone, camera device, selfie stick, camera-holding hand, and any phone reflection must remain completely outside the image and must never be visible.' },
+  ];
+
+  function renderVariations() {
+    if (!currentStructuredPrompt) return;
+    const area = document.getElementById('variationsArea');
+    const grid = document.getElementById('variationsGrid');
+    area.classList.add('visible');
+    grid.innerHTML = VARIATIONS.map(v => `
+      <button class="variation-btn" id="vbtn-${v.id}" onclick="applyVariation('${v.id}')">
+        <span class="var-icon">${v.icon}</span>
+        <span class="var-label">${currentLang === 'de' ? v.labelDe : v.labelEn}</span>
+        <span class="var-desc">${currentLang === 'de' ? v.descDe : v.descEn}</span>
+      </button>`).join('');
+  }
+
+  async function applyVariation(varId) {
+    if (!currentStructuredPrompt) return;
+
+    const variation = VARIATIONS.find(v => v.id === varId);
+    if (!variation) return;
+    const btn = document.getElementById(`vbtn-${varId}`);
+    btn.classList.add('loading');
+    const origLabel = btn.querySelector('.var-label').textContent;
+    btn.querySelector('.var-label').textContent = '⏳ …';
+
+    const modelId = getOllamaModel();
+    const existingPrompt = currentStructuredPrompt.positive_prompt || '';
+    const negPrompt = document.getElementById('negPromptBox').value || currentStructuredPrompt.negative_prompt || '';
+
+    const variationPrompt = `You are an expert prompt editor for Krea 2.
+
+Take this existing positive prompt and create a variation of it with the following modification:
+MODIFICATION: ${variation.tweak}
+
+EXISTING PROMPT:
+${existingPrompt}
+
+EXISTING NEGATIVE PROMPT:
+${negPrompt}
+
+SOURCE IMAGE ANALYSIS:
+${JSON.stringify(currentStructuredPrompt.image_analysis || currentImageAnalysis || {})}
+
+Rules:
+- Keep all factual scene, clothing and character details unless the requested variation explicitly changes framing or pose
+- Only modify what the variation requests
+- Keep the result concise natural language (45-100 words), not keyword soup
+- Preserve factual fidelity to the original image analysis
+- For the iPhone selfie variation, add phone, smartphone, visible device, selfie stick, mirror phone reflection and professional studio portrait to negative_prompt
+- Return ONLY JSON with positive_prompt, negative_prompt and variation_applied="${varId}".`;
+
+    try {
+      const response = await callVLM(modelId, variationPrompt, null, VARIATION_RESULT_SCHEMA);
+      const parsed = await parseOllamaJson(response);
+      if (parsed.positive_prompt) {
+        currentStructuredPrompt.positive_prompt = parsed.positive_prompt;
+        currentStructuredPrompt.negative_prompt = parsed.negative_prompt || negPrompt;
+        currentStructuredPrompt.variation_applied = varId;
+        currentPrompts = [parsed.positive_prompt];
+        document.getElementById('negPromptBox').value = currentStructuredPrompt.negative_prompt;
+        // Update display
+        if (activeTab === 'txt') {
+          const outputBox = document.getElementById('outputBox');
+          outputBox.textContent = parsed.positive_prompt;
+        }
+        // Save to history
+        saveToHistory({ ...currentStructuredPrompt, variation_applied: varId });
+        // Flash the output box
+        const ob = document.getElementById('outputBox');
+        ob.style.borderColor = 'var(--accent)';
+        setTimeout(() => { ob.style.borderColor = ''; }, 1000);
+        // Switch to txt tab to show result
+        switchTab('txt');
+      }
+    } catch(err) {
+      showError(err.message);
+    } finally {
+      btn.classList.remove('loading');
+      btn.querySelector('.var-label').textContent = origLabel;
+    }
+  }
+
+  function setLoading(on) {
+    const btn = document.getElementById('generateBtn');
+    const spinner = document.getElementById('spinner');
+    const label = document.getElementById('btnLabel');
+    btn.disabled = on;
+    spinner.style.display = on ? 'block' : 'none';
+    label.textContent = on ? t('analyzingBtn') : t('generateBtn');
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = '⚠ ' + msg;
+    el.style.display = '';
+  }
+
+  function hideError() {
+    document.getElementById('errorMsg').style.display = 'none';
+  }
+
+  function downloadTxt() {
+    if (!currentStructuredPrompt) return;
+    const p = currentStructuredPrompt;
+    const person = p.person || {};
+    const isLora = p.generation_mode !== 'without_lora';
+    const lines = [
+      `=== PROMPT GENERATOR — ${isLora ? 'MIT LORA' : 'OHNE LORA'} ===\n`,
+      '--- POSITIVE PROMPT ---',
+      p.positive_prompt || '',
+      '\n--- NEGATIVE PROMPT ---',
+      p.negative_prompt || '',
+      `\n--- PERSON (${isLora ? 'Gesicht/Haare via LoRA' : 'kompletter Charakter'}) ---`,
+      `stature & build     : ${person.stature_and_build || ''}`,
+      `spatial relation    : ${person.spatial_relation_to_scene || ''}`,
+    ];
+    if (!isLora && person.face) {
+      lines.push('  FACE:');
+      Object.entries(person.face).forEach(([k,v]) => lines.push(`    ${k}: ${v}`));
+    }
+    if (!isLora && person.skin) {
+      lines.push('  SKIN:');
+      Object.entries(person.skin).forEach(([k,v]) => lines.push(`    ${k}: ${v}`));
+    }
+    if (!isLora && person.hair) {
+      lines.push('  HAIR:');
+      Object.entries(person.hair).forEach(([k,v]) => lines.push(`    ${k}: ${v}`));
+    }
+    if (person.clothing) {
+      lines.push('  CLOTHING:');
+      Object.entries(person.clothing).forEach(([k,v]) => lines.push(`    ${k}: ${v}`));
+    }
+    if (person.pose) {
+      lines.push('  POSE:');
+      Object.entries(person.pose).forEach(([k,v]) => lines.push(`    ${k}: ${v}`));
+    }
+    lines.push(
+      '\n--- SCENE ---',
+      ...Object.entries(p.scene || {}).map(([k,v]) => `${k}: ${v}`),
+      '\n--- OBJECTS & PROPS ---',
+      ...Object.entries(p.objects_and_props || {}).map(([k,v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`),
+      '\n--- COLORS ---',
+      ...Object.entries(p.colors || {}).map(([k,v]) => `${k}: ${v}`),
+      '\n--- LIGHTING ---',
+      ...Object.entries(p.lighting || {}).map(([k,v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`),
+      '\n--- TEXTURES & SURFACES ---',
+      ...Object.entries(p.textures_and_surfaces || {}).map(([k,v]) => `${k}: ${v}`),
+      '\n--- ATMOSPHERE ---',
+      ...Object.entries(p.atmosphere || {}).map(([k,v]) => `${k}: ${v}`),
+      '\n--- STYLE ---',
+      ...Object.entries(p.style || {}).map(([k,v]) => `${k}: ${v}`),
+    );
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    triggerDownload(blob, `prompt_${isLora ? 'lora' : 'nolora'}.txt`);
+  }
+
+  function downloadJson() {
+    if (!currentStructuredPrompt) return;
+    const blob = new Blob([JSON.stringify(currentStructuredPrompt, null, 2)], { type: 'application/json' });
+    triggerDownload(blob, 'chroma1hd_scene_prompt.json');
+  }
+
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function setTheme(mode) {
+    const html = document.documentElement;
+    html.classList.remove('light', 'system');
+    if (mode === 'light') html.classList.add('light');
+    else if (mode === 'system') html.classList.add('system');
+    // dark = no class (default :root)
+    localStorage.setItem('pg-theme', mode);
+    ['dark','light','system'].forEach(m => {
+      const btn = document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1));
+      if (btn) btn.classList.toggle('active', m === mode);
+    });
+  }
+
+  // ── Local Ollama configuration ───────────────────────────────────────────
+  function getOllamaModel() {
+    return document.getElementById('ollamaModel').value.trim();
+  }
+
+  function getOllamaServer() {
+    let value = document.getElementById('ollamaServer').value.trim().replace(/\/+$/, '') || 'http://127.0.0.1:11434';
+    if (!/^https?:\/\//i.test(value)) value = `http://${value}`;
+    return value;
+  }
+
+  let ollamaStatusTimer;
+  function onOllamaServerInput() {
+    localStorage.setItem('pg-ollama-server', getOllamaServer());
+    clearTimeout(ollamaStatusTimer);
+    ollamaStatusTimer = setTimeout(loadOllamaModels, 600);
+  }
+
+  function onOllamaModelChange() {
+    localStorage.setItem('pg-ollama-model', getOllamaModel());
+    checkReady();
+    checkBatchReady();
+  }
+
+  async function getOllamaModelCapabilities(model) {
+    let data;
+    if (window.ollamaDesktop?.modelInfo) {
+      data = await window.ollamaDesktop.modelInfo(getOllamaServer(), model);
+    } else {
+      const response = await fetch(`${getOllamaServer()}/api/show`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model })
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      data = await response.json();
+    }
+    return Array.isArray(data.capabilities) ? data.capabilities : [];
+  }
+
+  async function filterVisionModels(models, concurrency = 4) {
+    const visionModels = [];
+    let cursor = 0;
+    async function worker() {
+      while (cursor < models.length) {
+        const model = models[cursor++];
+        try {
+          const capabilities = await getOllamaModelCapabilities(model);
+          if (capabilities.includes('vision')) visionModels.push(model);
+        } catch { /* skip models whose metadata cannot be read */ }
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(concurrency, models.length) }, worker));
+    return visionModels.sort((a, b) => a.localeCompare(b));
+  }
+
+  async function loadOllamaModels() {
+    const dot = document.getElementById('ollamaDot');
+    const label = document.getElementById('ollamaStatus');
+    const select = document.getElementById('ollamaModel');
+    const refreshBtn = document.getElementById('ollamaRefreshBtn');
+    const preferred = localStorage.getItem('pg-ollama-model') || select.value;
+    dot.className = 'status-dot loading';
+    label.textContent = currentLang === 'de' ? 'Installierte Modelle werden geladen …' : 'Loading installed models …';
+    select.disabled = true;
+    refreshBtn.disabled = true;
+    try {
+      let data;
+      if (window.ollamaDesktop?.status) {
+        data = await window.ollamaDesktop.status(getOllamaServer());
+      } else {
+        const response = await fetch(`${getOllamaServer()}/api/tags`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        data = await response.json();
+      }
+      const installedModels = [...new Set((data.models || [])
+        .map(item => item.name || item.model)
+        .filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b));
+      const models = await filterVisionModels(installedModels);
+
+      if (!models.length) {
+        select.innerHTML = `<option value="">${currentLang === 'de' ? 'Kein Vision-Modell installiert' : 'No vision model installed'}</option>`;
+        dot.className = 'status-dot';
+        label.textContent = currentLang === 'de'
+          ? `Ollama online · ${installedModels.length} Modell(e), keines mit Vision`
+          : `Ollama online · ${installedModels.length} model(s), none with vision`;
+      } else {
+        select.innerHTML = models.map(model => `<option value="${escapeHtml(model)}">${escapeHtml(model)}</option>`).join('');
+        select.value = models.includes(preferred) ? preferred : models[0];
+        localStorage.setItem('pg-ollama-model', select.value);
+        dot.className = 'status-dot ready';
+        label.textContent = currentLang === 'de'
+          ? `Ollama bereit · ${models.length} Vision-Modell${models.length === 1 ? '' : 'e'}`
+          : `Ollama ready · ${models.length} vision model${models.length === 1 ? '' : 's'}`;
+      }
+    } catch (error) {
+      select.innerHTML = preferred
+        ? `<option value="${escapeHtml(preferred)}">${escapeHtml(preferred)}</option>`
+        : `<option value="">${currentLang === 'de' ? 'Keine Verbindung' : 'No connection'}</option>`;
+      dot.className = 'status-dot';
+      label.textContent = currentLang === 'de' ? 'Ollama ist nicht erreichbar' : 'Ollama is not reachable';
+    } finally {
+      select.disabled = false;
+      refreshBtn.disabled = false;
+      checkReady();
+      checkBatchReady();
+    }
+  }
+
+  // ── Prompt Editor toggle ──────────────────────────────────────────────────
+  let editMode = false;
+  function toggleEdit() {
+    editMode = !editMode;
+    const box = document.getElementById('outputBox');
+    const btn = document.getElementById('editToggleBtn');
+    if (editMode) {
+      box.contentEditable = 'true';
+      box.focus();
+      btn.textContent = t('saveEditBtn');
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.color = 'var(--accent)';
+    } else {
+      // Save edited content back to currentStructuredPrompt
+      if (currentStructuredPrompt && activeTab === 'txt') {
+        currentStructuredPrompt.positive_prompt = box.innerText.trim();
+      }
+      box.contentEditable = 'false';
+      btn.textContent = t('editBtn');
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    }
+  }
+
+  // ── Negative Prompt sync ──────────────────────────────────────────────────
+  function showNegPrompt() {
+    const area = document.getElementById('negPromptArea');
+    const box  = document.getElementById('negPromptBox');
+    area.classList.add('visible');
+    box.value = currentStructuredPrompt?.negative_prompt || '';
+    box.oninput = () => {
+      if (currentStructuredPrompt) currentStructuredPrompt.negative_prompt = box.value;
+    };
+  }
+
+  // ── Prompt History ────────────────────────────────────────────────────────
+  const HISTORY_KEY = 'pg-history';
+  const HISTORY_MAX = 20;
+
+  function saveToHistory(promptData) {
+    let hist = getHistory();
+    hist.unshift({
+      id: Date.now(),
+      ts: new Date().toISOString(),
+      mode: promptData.generation_mode || 'with_lora',
+      style: document.getElementById('styleOpt').value.split(',')[0],
+      mood: document.getElementById('moodOpt').value,
+      provider: 'ollama',
+      model: getOllamaModel(),
+      positive_prompt: promptData.positive_prompt || '',
+      negative_prompt: promptData.negative_prompt || '',
+      full: promptData
+    });
+    if (hist.length > HISTORY_MAX) hist = hist.slice(0, HISTORY_MAX);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+  }
+
+  function getHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; }
+  }
+
+  function openHistory() {
+    renderHistoryList();
+    document.getElementById('historyModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeHistory() {
+    document.getElementById('historyModal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function closeHistoryOnOverlay(e) {
+    if (e.target === document.getElementById('historyModal')) closeHistory();
+  }
+
+  function renderHistoryList() {
+    const hist = getHistory();
+    const container = document.getElementById('historyListContainer');
+    if (!hist.length) {
+      container.innerHTML = `<div class="history-empty">${currentLang === 'de' ? 'Noch keine Prompts gespeichert.' : 'No prompts saved yet.'}</div>`;
+      return;
+    }
+    const items = hist.map(h => {
+      const date = new Date(h.ts).toLocaleString(currentLang === 'de' ? 'de-DE' : 'en-GB', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      const preview = (h.positive_prompt || '').substring(0, 160) + (h.positive_prompt?.length > 160 ? '…' : '');
+      return `<div class="history-item" onclick="restoreHistory(${h.id})">
+        <div class="history-item-meta">
+          <div class="history-item-tags">
+            <span class="history-tag">${h.style}</span>
+            <span class="history-tag">${h.mood}</span>
+            <span class="history-tag">${h.mode === 'with_lora' ? 'LoRA' : 'No LoRA'}</span>
+            <span class="history-tag">${h.model}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="history-item-time">${date}</span>
+            <button class="history-item-del" onclick="deleteHistory(event,${h.id})">✕</button>
+          </div>
+        </div>
+        <div class="history-item-preview">${preview}</div>
+      </div>`;
+    }).join('');
+    container.innerHTML = `<div class="history-list">${items}</div>
+      <button class="history-clear-btn" onclick="clearHistory()">${currentLang === 'de' ? '🗑 Verlauf löschen' : '🗑 Clear history'}</button>`;
+  }
+
+  function restoreHistory(id) {
+    const hist = getHistory();
+    const entry = hist.find(h => h.id === id);
+    if (!entry) return;
+    currentStructuredPrompt = entry.full;
+    currentImageAnalysis = entry.full.image_analysis || null;
+    currentPrompts = [entry.full.positive_prompt || ''];
+    selectedVariant = 0;
+    renderOutput();
+    closeHistory();
+  }
+
+  function deleteHistory(e, id) {
+    e.stopPropagation();
+    let hist = getHistory().filter(h => h.id !== id);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+    renderHistoryList();
+  }
+
+  function clearHistory() {
+    localStorage.removeItem(HISTORY_KEY);
+    renderHistoryList();
+  }
+
+  // ── Batch mode ────────────────────────────────────────────────────────────
+  let batchMode = false;
+  let batchFiles = [];
+
+  function setBatchMode(on) {
+    batchMode = on;
+    document.getElementById('singleUpload').style.display = on ? 'none' : '';
+    document.getElementById('batchUpload').style.display = on ? '' : 'none';
+    document.getElementById('btnSingle').classList.toggle('active', !on);
+    document.getElementById('btnBatch').classList.toggle('active', on);
+  }
+
+  // Batch file input
+  document.addEventListener('DOMContentLoaded', () => {
+    const bfi = document.getElementById('batchFileInput');
+    if (bfi) bfi.addEventListener('change', () => {
+      [...bfi.files].forEach(addBatchFile);
+      bfi.value = '';
+    });
+    const bz = document.getElementById('batchZone');
+    if (bz) {
+      bz.addEventListener('dragover', e => { e.preventDefault(); bz.style.borderColor = 'var(--accent)'; });
+      bz.addEventListener('dragleave', () => { bz.style.borderColor = ''; });
+      bz.addEventListener('drop', e => {
+        e.preventDefault(); bz.style.borderColor = '';
+        [...e.dataTransfer.files].filter(f => f.type.startsWith('image/')).forEach(addBatchFile);
+      });
+    }
+  });
+
+  function addBatchFile(file) {
+    if (!file.type.startsWith('image/')) return;
+    if (batchFiles.some(b => b.name === file.name && b.size === file.size)) return;
+    const id = Date.now() + Math.random();
+    batchFiles.push({ id, file, status: 'pending', result: null });
+    renderBatchList();
+    checkBatchReady();
+  }
+
+  function renderBatchList() {
+    const list = document.getElementById('batchList');
+    if (!batchFiles.length) { list.innerHTML = ''; return; }
+    list.innerHTML = batchFiles.map(b => {
+      const statusLabel = { pending: '⏳', running: '⚙️', done: '✅', error: '❌' }[b.status] || '';
+      return `<div class="batch-item" id="bi-${b.id}">
+        <img class="batch-item-thumb" id="bithumb-${b.id}" src="">
+        <span class="batch-item-name">${b.file.name}</span>
+        <span class="batch-item-status ${b.status}">${statusLabel} ${b.status}</span>
+        <button class="batch-remove" onclick="removeBatchFile('${b.id}')">✕</button>
+      </div>`;
+    }).join('');
+    // Load thumbnails
+    batchFiles.forEach(b => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = document.getElementById(`bithumb-${b.id}`);
+        if (img) img.src = e.target.result;
+      };
+      reader.readAsDataURL(b.file);
+    });
+  }
+
+  function removeBatchFile(id) {
+    batchFiles = batchFiles.filter(b => String(b.id) !== String(id));
+    renderBatchList();
+    checkBatchReady();
+  }
+
+  function checkBatchReady() {
+    const btn = document.getElementById('batchRunBtn');
+    if (btn) btn.disabled = !(batchFiles.length > 0 && getOllamaModel());
+  }
+
+  async function runBatch() {
+    const modelId = getOllamaModel();
+    if (!modelId || !batchFiles.length) return;
+
+    const btn = document.getElementById('batchRunBtn');
+    const spinner = document.getElementById('batchSpinner');
+    const label = document.getElementById('batchBtnLabel');
+    btn.disabled = true;
+    spinner.style.display = 'block';
+
+    const results = [];
+
+    for (let i = 0; i < batchFiles.length; i++) {
+      const b = batchFiles[i];
+      b.status = 'running';
+      renderBatchList();
+      label.textContent = `${i+1}/${batchFiles.length} …`;
+
+      try {
+        const base64 = await fileToBase64(b.file);
+        const style   = document.getElementById('styleOpt').value;
+        const mood    = document.getElementById('moodOpt').value;
+        const light   = document.getElementById('lightOpt').value;
+        const detail  = document.getElementById('detailOpt').value;
+        const camera  = document.getElementById('cameraOpt').value;
+        const isL     = loraMode === 'lora';
+        const generated = await generateKrea2Result(modelId, base64, {
+          style, mood, light, detail, camera, isLora: isL
+        });
+        b.result = generated.result;
+        b.status = 'done';
+        results.push({ name: b.file.name.replace(/\.[^.]+$/, ''), data: b.result });
+        saveToHistory(b.result);
+      } catch(err) {
+        b.status = 'error';
+        b.error = err.message;
+      }
+      renderBatchList();
+    }
+
+    spinner.style.display = 'none';
+    btn.disabled = false;
+    label.textContent = t('batchDownload');
+
+    if (results.length > 0) {
+      await downloadBatchZip(results);
+      label.textContent = t('batchRun');
+    }
+  }
+
+  function fileToBase64(file) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = e => res(e.target.result.split(',')[1]);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+  }
+
+  async function downloadBatchZip(results) {
+    // Build a simple ZIP manually (stored, no compression)
+    const files = [];
+    results.forEach(r => {
+      const txt = [
+        `=== PROMPT GENERATOR ===\n`,
+        '--- POSITIVE PROMPT ---', r.data.positive_prompt || '',
+        '\n--- NEGATIVE PROMPT ---', r.data.negative_prompt || '',
+      ].join('\n');
+      files.push({ name: `${r.name}_prompt.txt`, data: new TextEncoder().encode(txt) });
+      files.push({ name: `${r.name}_prompt.json`, data: new TextEncoder().encode(JSON.stringify(r.data, null, 2)) });
+    });
+
+    const zip = buildZip(files);
+    const blob = new Blob([zip], { type: 'application/zip' });
+    triggerDownload(blob, 'batch_prompts.zip');
+  }
+
+  function buildZip(files) {
+    // Minimal ZIP builder (STORE method, no compression)
+    const enc = s => new TextEncoder().encode(s);
+    const u32 = n => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0,n,true); return b; };
+    const u16 = n => { const b = new Uint8Array(2); new DataView(b.buffer).setUint16(0,n,true); return b; };
+    const crc32 = data => {
+      let c = 0xFFFFFFFF;
+      const t = new Uint32Array(256).map((_,i) => { let v=i; for(let j=0;j<8;j++) v=v&1?0xEDB88320^(v>>>1):v>>>1; return v; });
+      for (const b of data) c = t[(c^b)&0xFF]^(c>>>8);
+      return (c^0xFFFFFFFF)>>>0;
+    };
+    const concat = (...arrays) => { const out = new Uint8Array(arrays.reduce((s,a)=>s+a.length,0)); let o=0; arrays.forEach(a=>{out.set(a,o);o+=a.length;}); return out; };
+
+    const locals = []; const centrals = []; let offset = 0;
+    const now = new Date();
+    const dosDate = ((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate();
+    const dosTime = (now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1);
+
+    files.forEach(f => {
+      const nameBytes = enc(f.name);
+      const crc = crc32(f.data);
+      const local = concat(
+        new Uint8Array([0x50,0x4B,0x03,0x04]), u16(20), u16(0), u16(0),
+        u16(dosTime), u16(dosDate),
+        u32(crc), u32(f.data.length), u32(f.data.length),
+        u16(nameBytes.length), u16(0),
+        nameBytes, f.data
+      );
+      locals.push(local);
+      centrals.push(concat(
+        new Uint8Array([0x50,0x4B,0x01,0x02]), u16(20), u16(20), u16(0), u16(0),
+        u16(dosTime), u16(dosDate),
+        u32(crc), u32(f.data.length), u32(f.data.length),
+        u16(nameBytes.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(offset),
+        nameBytes
+      ));
+      offset += local.length;
+    });
+
+    const cdOffset = offset;
+    const cd = concat(...centrals);
+    const eocd = concat(
+      new Uint8Array([0x50,0x4B,0x05,0x06]),
+      u16(0), u16(0), u16(files.length), u16(files.length),
+      u32(cd.length), u32(cdOffset), u16(0)
+    );
+    return concat(...locals, cd, eocd);
+  }
+
+  // ── Extract buildUserPrompt helper ────────────────────────────────────────
+  function buildUserPrompt(style, mood, light, detail, camera, cameraStr, isLora, skinRealismEnhancement) {
+    const personBlockLora = `\nSTRICT RULES — what to INCLUDE:\n- Scene: architecture, space, objects, materials, surfaces, colors, lighting, atmosphere, depth, textures\n- Person: clothing (every garment in full detail), body stature/build, pose\n\nSTRICT RULES — what to EXCLUDE (LoRA handles these):\n- NO face, NO skin, NO hair\n\nPERSON ANALYSIS (NO face/skin/hair):\n- Clothing, stature, pose, spatial relation`;
+    const personBlockNoLora = `\nFULL CHARACTER ANALYSIS:\n- Face shape, structure, expression, eyes, eyebrows, nose, lips, jaw\n- Skin tone, texture, undertone\n- Hair color, texture, length, style, flyaways\n- Clothing, stature, pose, gaze, age range, energy`;
+    const jsonPersonLora = `"person": {"mode":"LoRA","stature_and_build":"...","clothing":{"top":"...","bottom":"...","outerwear":"...","footwear":"...","accessories":"...","overall_style":"..."},"pose":{"body_position":"...","arms_and_hands":"...","legs_and_feet":"...","torso_angle":"...","head_direction":"...","weight_distribution":"...","pose_energy":"..."},"spatial_relation_to_scene":"..."},`;
+    const jsonPersonNoLora = `"person": {"mode":"Full character","stature_and_build":"...","age_range":"...","presence_and_energy":"...","face":{"face_shape":"...","expression":"...","eyes":"...","eyebrows":"...","nose":"...","lips":"...","jaw_and_cheekbones":"...","distinctive_features":"..."},"skin":{"tone":"...","undertone":"...","texture":"..."},"hair":{"color":"...","texture":"...","length":"...","style":"...","details":"..."},"clothing":{"top":"...","bottom":"...","outerwear":"...","footwear":"...","accessories":"...","overall_style":"..."},"pose":{"body_position":"...","arms_and_hands":"...","legs_and_feet":"...","torso_angle":"...","head_position":"...","gaze_direction":"...","weight_distribution":"...","pose_energy":"..."},"spatial_relation_to_scene":"..."},`;
+    const posInstrLora   = `exhaustive prompt: person (clothing/pose/stature, NO face/hair/skin) + full scene/lighting/colors/textures + realism enhancement. 160-220 words.`;
+    const posInstrNoLora = `exhaustive prompt: complete character (face/skin/hair/clothing/pose) + full scene/lighting/colors/textures + realism enhancement. 180-250 words.`;
+    const negLora   = `face focus, portrait close-up, facial features, skin texture, hair detail, blur, low quality, distorted, cartoon, anime, watermark, overexposed, flat lighting, airbrushed`;
+    const negNoLora = `blur, low quality, distorted, deformed, cartoon, anime, watermark, overexposed, flat lighting, airbrushed, plastic skin, over-smoothed, poreless skin, glassy eyes`;
+    return `You are an expert AI image prompt engineer for Chroma1-HD.\nMODE: ${isLora ? 'WITH LORA — exclude face/hair/skin' : 'WITHOUT LORA — full character description'}\n${isLora ? personBlockLora : personBlockNoLora}\nSCENE: environment, architecture, objects, materials, textures, colors, lighting, depth, atmosphere, time of day.\nREALISM: ${skinRealismEnhancement}\nPreferences: style=${style}, mood=${mood}, lighting=${light}, detail=${detail}${cameraStr}.\nOutput ONLY this JSON:\n{"model":"Chroma1-HD","generation_mode":"${isLora?'with_lora':'without_lora'}","version":"1.0",${isLora?jsonPersonLora:jsonPersonNoLora}"scene":{"environment_type":"...","setting_description":"...","architecture":"...","foreground":"...","midground":"...","background":"...","depth_layers":"..."},"objects_and_props":{"main_elements":["..."],"secondary_elements":["..."],"surface_details":"...","materials":["..."]},"colors":{"dominant":"...","accent":"...","shadows":"...","highlights":"...","overall_palette":"..."},"lighting":{"type":"...","direction":"...","quality":"...","color_temperature":"...","shadows":"...","reflections":"...","light_sources":["..."],"atmosphere":"..."},"textures_and_surfaces":{"floor":"...","walls":"...","ceiling":"...","other_surfaces":"..."},"atmosphere":{"mood":"...","time_of_day":"...","weather_or_conditions":"...","spatial_feeling":"..."},"style":{"render_style":"${style}","mood_enhancement":"${mood}","detail_level":"${detail}","realism_notes":"${skinRealismEnhancement}"},"positive_prompt":"${isLora?posInstrLora:posInstrNoLora}","negative_prompt":"${isLora?negLora:negNoLora}"}`;
+  }
+
+  // ── ComfyUI / A1111 / FLUX Format Modal ──────────────────────────────────
+  let currentFmtTab = 'a1111';
+
+  function openFormatModal() {
+    if (!currentStructuredPrompt) return;
+    populateFormatModal();
+    document.getElementById('formatModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeFormatModal() {
+    document.getElementById('formatModal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function closeFormatOnOverlay(e) {
+    if (e.target === document.getElementById('formatModal')) closeFormatModal();
+  }
+  function switchFmtTab(tab) {
+    currentFmtTab = tab;
+    ['a1111','comfy','flux'].forEach(t => {
+      document.getElementById('fmtTab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+      document.getElementById('fmt' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+    });
+  }
+
+  function populateFormatModal() {
+    const p = currentStructuredPrompt;
+    if (!p) return;
+
+    // Get current neg prompt (may have been edited)
+    const negBox = document.getElementById('negPromptBox');
+    const negPrompt = (negBox && negBox.value) ? negBox.value : (p.negative_prompt || '');
+    const posPrompt = p.positive_prompt || '';
+    const style = document.getElementById('styleOpt').value.split(',')[0];
+    const detail = document.getElementById('detailOpt').value.split(',')[0];
+    const camera = document.getElementById('cameraOpt').value.split(',')[0];
+
+    // ── A1111 ──
+    // Add quality boosters typical for A1111
+    const a1111Pos = `${posPrompt}, masterpiece, best quality, ultra-detailed`;
+    const a1111Neg = `${negPrompt}, (worst quality:1.4), (low quality:1.4), (normal quality:1.4), lowres, bad anatomy, bad hands, error, missing fingers, extra digit, fewer digits, cropped, jpeg artifacts, signature, watermark, username, blurry`;
+    document.getElementById('fmtA1111Pos').textContent = a1111Pos;
+    document.getElementById('fmtA1111Neg').textContent = a1111Neg;
+    document.getElementById('fmtA1111Params').textContent =
+      `Steps: 28-35  |  Sampler: DPM++ 2M Karras  |  CFG Scale: 7  |  Size: 768×1024 (portrait) or 1024×1024\nHires fix: 2x  |  Denoising: 0.4-0.6  |  Clip skip: 2`;
+
+    // ── ComfyUI ──
+    const comfyNode = {
+      "CLIPTextEncode_positive": {
+        "inputs": { "text": a1111Pos },
+        "class_type": "CLIPTextEncode",
+        "_meta": { "title": "CLIP Text Encode (Positive)" }
+      },
+      "CLIPTextEncode_negative": {
+        "inputs": { "text": a1111Neg },
+        "class_type": "CLIPTextEncode",
+        "_meta": { "title": "CLIP Text Encode (Negative)" }
+      },
+      "KSampler_settings": {
+        "recommended": {
+          "steps": 28,
+          "cfg": 7,
+          "sampler_name": "dpmpp_2m",
+          "scheduler": "karras",
+          "denoise": 1.0
+        }
+      }
+    };
+    document.getElementById('fmtComfyJson').textContent = JSON.stringify(comfyNode, null, 2);
+
+    // ── FLUX ──
+    // FLUX doesn't use negative prompts or SD-style weights — needs clean descriptive prompt
+    // Strip parenthetical weights like (word:1.4), clean up
+    let fluxPrompt = posPrompt
+      .replace(/\([^)]+:\d+\.?\d*\)/g, '') // remove (word:weight)
+      .replace(/\[([^\]]+)\]/g, '$1')       // remove [word] emphasis
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    // FLUX prefers natural language — add style descriptor naturally
+    fluxPrompt = `${fluxPrompt}. ${detail} quality, ${style} aesthetic.`;
+    document.getElementById('fmtFluxPrompt').textContent = fluxPrompt;
+    document.getElementById('fmtFluxTips').textContent =
+      `• FLUX nutzt KEINEN Negative Prompt — einfach leer lassen\n• Keine (Gewichtungen:1.4) verwenden — natürliche Sprache\n• CFG: 3.5–5  |  Steps: 20–28  |  Sampler: Euler / DPM++ 2M\n• Fooocus: Style "Fooocus Enhance" + "Fooocus Sharp" empfohlen`;
+  }
+
+  async function copyFmt(elId, btnId) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const text = el.innerText || el.textContent || '';
+    try {
+      await navigator.clipboard.writeText(text.trim());
+      const btn = document.getElementById(btnId);
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = '✓ Kopiert!';
+        btn.style.borderColor = 'var(--accent)';
+        btn.style.color = 'var(--accent)';
+        setTimeout(() => { btn.textContent = orig; btn.style.borderColor=''; btn.style.color=''; }, 2000);
+      }
+    } catch(e) { showError(t('errCopy')); }
+  }
+
+  // ── BUG FIXES ─────────────────────────────────────────────────────────────
+
+  // Fix 1: copyPrompt — subject tab was using .subject (old field), now uses full person+scene text
+  async function copyPrompt() {
+    let text = '';
+    if (activeTab === 'json') {
+      text = JSON.stringify(currentStructuredPrompt, null, 2);
+    } else if (activeTab === 'analysis') {
+      text = JSON.stringify(currentImageAnalysis || currentStructuredPrompt?.image_analysis || {}, null, 2);
+    } else if (activeTab === 'subject') {
+      // Build from current outputBox text content (already rendered)
+      text = document.getElementById('outputBox').innerText || '';
+    } else {
+      // txt tab — get from contenteditable box (may have been edited)
+      text = document.getElementById('outputBox').innerText || currentStructuredPrompt?.positive_prompt || '';
+    }
+    if (!text.trim()) return;
+    try {
+      await navigator.clipboard.writeText(text.trim());
+      const btn = document.getElementById('copyBtn');
+      btn.classList.add('copied');
+      btn.textContent = t('copied');
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = t('copyBtn'); }, 2000);
+    } catch { showError(t('errCopy')); }
+  }
+
+  // Preserve edited text when switching back to the text tab.
+  function switchTab(tab) {
+    activeTab = tab;
+    const outputBox = document.getElementById('outputBox');
+    ['txt','analysis','json'].forEach(id => {
+      const el = document.getElementById('tab' + id.charAt(0).toUpperCase() + id.slice(1));
+      if (el) el.classList.toggle('active', id === tab);
+    });
+    if (!currentStructuredPrompt) return;
+
+    // If in edit mode on txt tab, save before switching
+    if (editMode) {
+      currentStructuredPrompt.positive_prompt = outputBox.innerText.trim();
+      outputBox.contentEditable = 'false';
+      editMode = false;
+      const editBtn = document.getElementById('editToggleBtn');
+      if (editBtn) { editBtn.textContent = t('editBtn'); editBtn.style.borderColor=''; editBtn.style.color=''; }
+    }
+
+    if (tab === 'txt') {
+      outputBox.textContent = currentStructuredPrompt.positive_prompt || '';
+    } else if (tab === 'analysis') {
+      outputBox.textContent = JSON.stringify(currentImageAnalysis || currentStructuredPrompt.image_analysis || {}, null, 2);
+    } else if (tab === 'json') {
+      outputBox.textContent = JSON.stringify(currentStructuredPrompt, null, 2);
+    } else if (tab === 'subject') {
+      const p = currentStructuredPrompt;
+      const lines = [];
+      const mode = p.generation_mode || 'with_lora';
+      lines.push(`MODE: ${mode === 'with_lora' ? '🧬 Mit LoRA (Gesicht/Haare via LoRA)' : '🎨 Ohne LoRA (kompletter Charakter)'}\n`);
+      if (p.person) {
+        lines.push('PERSON');
+        lines.push(`  stature       : ${p.person.stature_and_build || ''}`);
+        if (p.person.age_range) lines.push(`  age range     : ${p.person.age_range}`);
+        if (p.person.presence_and_energy) lines.push(`  energy        : ${p.person.presence_and_energy}`);
+        if (p.person.face) {
+          lines.push('  FACE');
+          Object.entries(p.person.face).forEach(([k,v]) => lines.push(`    ${k.padEnd(20)}: ${v}`));
+        }
+        if (p.person.skin) {
+          lines.push('  SKIN');
+          Object.entries(p.person.skin).forEach(([k,v]) => lines.push(`    ${k.padEnd(20)}: ${v}`));
+        }
+        if (p.person.hair) {
+          lines.push('  HAIR');
+          Object.entries(p.person.hair).forEach(([k,v]) => lines.push(`    ${k.padEnd(20)}: ${v}`));
+        }
+        if (p.person.clothing) {
+          lines.push('  CLOTHING');
+          Object.entries(p.person.clothing).forEach(([k,v]) => lines.push(`    ${k.padEnd(20)}: ${v}`));
+        }
+        if (p.person.pose) {
+          lines.push('  POSE');
+          Object.entries(p.person.pose).forEach(([k,v]) => lines.push(`    ${k.padEnd(20)}: ${v}`));
+        }
+        lines.push(`  spatial rel.  : ${p.person.spatial_relation_to_scene || ''}`);
+        lines.push('');
+      }
+      lines.push('SCENE');
+      Object.entries(p.scene || {}).forEach(([k,v]) => lines.push(`  ${k.padEnd(22)}: ${v}`));
+      lines.push('\nATMOSPHERE');
+      Object.entries(p.atmosphere || {}).forEach(([k,v]) => lines.push(`  ${k.padEnd(22)}: ${v}`));
+      lines.push('\nCOLORS');
+      Object.entries(p.colors || {}).forEach(([k,v]) => lines.push(`  ${k.padEnd(22)}: ${v}`));
+      outputBox.textContent = lines.join('\n');
+    }
+  }
+
+  // ── History modal ─────────────────────────────────────────────────────────
+  function openHistory() {
+    renderHistoryList();
+    document.getElementById('historyModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeHistory() {
+    document.getElementById('historyModal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function closeHistoryOnOverlay(e) {
+    if (e.target === document.getElementById('historyModal')) closeHistory();
+  }
+
+  // ── Init theme, language and local Ollama ─────────────────────────────────
+  function openHelp() {
+    document.getElementById('helpModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    // sync help lang to app lang
+    switchHelpLang(currentLang);
+  }
+
+  function closeHelp() {
+    document.getElementById('helpModal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function closeHelpOnOverlay(e) {
+    if (e.target === document.getElementById('helpModal')) closeHelp();
+  }
+
+  function switchHelpLang(lang) {
+    document.getElementById('htDe').classList.toggle('active', lang === 'de');
+    document.getElementById('htEn').classList.toggle('active', lang === 'en');
+    document.getElementById('hcDe').classList.toggle('active', lang === 'de');
+    document.getElementById('hcEn').classList.toggle('active', lang === 'en');
+  }
+
+  // Close on Escape key
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeHelp(); closeHistory(); closeFormatModal(); } });
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  (function() {
+    const savedTheme = localStorage.getItem('pg-theme') || 'dark';
+    setTheme(savedTheme);
+    const savedLang = localStorage.getItem('pg-lang') || 'de';
+    setLang(savedLang);
+    document.getElementById('ollamaServer').value = localStorage.getItem('pg-ollama-server') || 'http://127.0.0.1:11434';
+    checkReady();
+    loadOllamaModels();
+  })();
+
+</script>
+<!-- ── FORMAT MODAL ───────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="formatModal" onclick="closeFormatOnOverlay(event)">
+  <div class="modal" style="max-width:700px;">
+    <button class="modal-close" onclick="closeFormatModal()">✕</button>
+    <h2>⚙️ <span data-i18n="fmtTitle">Export Format</span></h2>
+    <div class="modal-version" data-i18n="fmtSubtitle">Prompt für ComfyUI, Automatic1111 oder FLUX formatieren</div>
+
+    <div class="help-tabs" style="margin-bottom:16px;">
+      <button class="help-tab-btn active" id="fmtTabA1111" onclick="switchFmtTab('a1111')">🖼 Automatic1111 / WebUI</button>
+      <button class="help-tab-btn" id="fmtTabComfy" onclick="switchFmtTab('comfy')">🔧 ComfyUI (JSON Node)</button>
+      <button class="help-tab-btn" id="fmtTabFlux" onclick="switchFmtTab('flux')">⚡ FLUX / Fooocus</button>
+    </div>
+
+    <!-- A1111 -->
+    <div class="help-content active" id="fmtA1111">
+      <div class="help-section">
+        <h3 data-i18n="fmtA1111Title">Automatic1111 / SD WebUI Format</h3>
+        <p data-i18n="fmtA1111Desc">Kopiere Positive und Negative Prompt direkt in die entsprechenden Felder von Automatic1111 oder SD.Next.</p>
+      </div>
+      <div class="option-group" style="margin-bottom:12px;">
+        <label style="font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);" data-i18n="fmtPositive">Positive Prompt</label>
+        <div class="output-box active" id="fmtA1111Pos" style="font-size:0.76rem;min-height:80px;cursor:text;" contenteditable="true" spellcheck="false"></div>
+        <button class="btn-secondary" style="margin-top:8px;" onclick="copyFmt('fmtA1111Pos','fmtCopyPosBtn')" id="fmtCopyPosBtn" data-i18n="fmtCopyPos">📋 Positive kopieren</button>
+      </div>
+      <div class="option-group">
+        <label style="font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);" data-i18n="fmtNegative">Negative Prompt</label>
+        <div class="output-box active" id="fmtA1111Neg" style="font-size:0.76rem;min-height:60px;cursor:text;" contenteditable="true" spellcheck="false"></div>
+        <button class="btn-secondary" style="margin-top:8px;" onclick="copyFmt('fmtA1111Neg','fmtCopyNegBtn')" id="fmtCopyNegBtn" data-i18n="fmtCopyNeg">📋 Negative kopieren</button>
+      </div>
+      <div class="option-group" style="margin-top:14px;">
+        <label style="font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);" data-i18n="fmtSuggestedParams">Empfohlene Parameter</label>
+        <div class="output-box" id="fmtA1111Params" style="font-size:0.72rem;min-height:auto;"></div>
+      </div>
+    </div>
+
+    <!-- ComfyUI -->
+    <div class="help-content" id="fmtComfy">
+      <div class="help-section">
+        <h3 data-i18n="fmtComfyTitle">ComfyUI — CLIPTextEncode Node</h3>
+        <p data-i18n="fmtComfyDesc">Füge dieses JSON direkt als Input für einen CLIPTextEncode-Node ein, oder kopiere die Prompts einzeln.</p>
+      </div>
+      <div class="output-box active" id="fmtComfyJson" style="font-size:0.72rem;min-height:200px;" contenteditable="true" spellcheck="false"></div>
+      <button class="btn-secondary" style="margin-top:10px;" onclick="copyFmt('fmtComfyJson','fmtCopyComfyBtn')" id="fmtCopyComfyBtn" data-i18n="fmtCopyComfy">📋 ComfyUI JSON kopieren</button>
+    </div>
+
+    <!-- FLUX -->
+    <div class="help-content" id="fmtFlux">
+      <div class="help-section">
+        <h3 data-i18n="fmtFluxTitle">FLUX / Fooocus Format</h3>
+        <p data-i18n="fmtFluxDesc">FLUX nutzt einen einzigen Prompt ohne Negative. Der Prompt wird für FLUX optimiert – keine Gewichtungen, klare Beschreibung, beschreibender Stil.</p>
+      </div>
+      <div class="output-box active" id="fmtFluxPrompt" style="font-size:0.76rem;min-height:100px;cursor:text;" contenteditable="true" spellcheck="false"></div>
+      <button class="btn-secondary" style="margin-top:10px;" onclick="copyFmt('fmtFluxPrompt','fmtCopyFluxBtn')" id="fmtCopyFluxBtn" data-i18n="fmtCopyFlux">📋 FLUX Prompt kopieren</button>
+      <div class="option-group" style="margin-top:14px;">
+        <label style="font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);" data-i18n="fmtFluxTips">FLUX Tipps</label>
+        <div class="output-box" id="fmtFluxTips" style="font-size:0.72rem;min-height:auto;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── HISTORY MODAL ──────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="historyModal" onclick="closeHistoryOnOverlay(event)">
+  <div class="modal" style="max-width:680px;">
+    <button class="modal-close" onclick="closeHistory()">✕ Close</button>
+    <h2>🕘 <span data-i18n="historyTitle">Prompt-Verlauf</span></h2>
+    <div class="modal-version" data-i18n="historySubtitle">Die letzten 20 generierten Prompts</div>
+    <div id="historyListContainer"></div>
+  </div>
+</div>
+
+<!-- ── HELP MODAL ─────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="helpModal" onclick="closeHelpOnOverlay(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeHelp()">✕ Close</button>
+
+    <!-- Lang tabs inside modal -->
+    <div class="help-tabs">
+      <button class="help-tab-btn active" id="htDe" onclick="switchHelpLang('de')">🇩🇪 Deutsch</button>
+      <button class="help-tab-btn" id="htEn" onclick="switchHelpLang('en')">🇬🇧 English</button>
+    </div>
+
+    <!-- ── DEUTSCH ──────────────────────────────────────────────────────── -->
+    <div class="help-content active" id="hcDe">
+      <h2>Prompt <span>Generator</span> · Hilfe</h2>
+      <div class="modal-version">Version 3.3 · Ollama Vision · Krea 2</div>
+
+      <div class="help-section">
+        <h3>Was ist der Prompt Generator?</h3>
+        <p>Der Prompt Generator analysiert ein hochgeladenes Bild zunächst faktisch mit einem Ollama Vision-Modell. Aus dieser überprüfbaren Analyse entsteht anschließend ein kompakter, natürlicher Prompt speziell für <strong>Krea 2</strong>. Die Verarbeitung erfolgt auf deinem lokalen oder selbst gewählten Ollama-Server.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Schnellstart</h3>
+        <div class="help-step"><div class="help-step-num">1</div><p><strong>Bild hochladen</strong> – Ziehe ein Bild (JPG, PNG, WEBP bis 20 MB) in die Drop-Zone oder klicke darauf. Für mehrere Bilder: <strong>Batch-Modus</strong> aktivieren.</p></div>
+        <div class="help-step"><div class="help-step-num">2</div><p><strong>Ollama verbinden</strong> – Trage die Serveradresse ein, z. B. <code>http://127.0.0.1:11434</code> oder die IP deines Ollama-Servers im LAN.</p></div>
+        <div class="help-step"><div class="help-step-num">3</div><p><strong>Modell auswählen</strong> – Die App lädt alle auf dem Ollama-Server installierten Modelle. Für Bildanalysen wählst du ein Vision-fähiges Modell.</p></div>
+        <div class="help-step"><div class="help-step-num">4</div><p><strong>Modus wählen</strong> – <strong>Mit LoRA 🧬</strong>: Gesicht/Haare werden weggelassen (LoRA übernimmt das). <strong>Ohne LoRA 🎨</strong>: Kompletter Charakter inkl. Gesicht wird beschrieben.</p></div>
+        <div class="help-step"><div class="help-step-num">5</div><p><strong>Optionen anpassen</strong> – Stil, Stimmung, Beleuchtung, Detailgrad, Kamera. Stile: u.a. Instagram Style, TikTok Style. Kameras: iPhone, Webcam, 35mm, 85mm usw.</p></div>
+        <div class="help-step"><div class="help-step-num">6</div><p><strong>⚡ Generieren</strong> – Das Ergebnis erscheint in drei Tabs. Danach: bearbeiten, variieren, exportieren oder in den Verlauf schauen.</p></div>
+      </div>
+
+      <div class="help-section">
+        <h3>Ollama-Verbindung</h3>
+        <div class="help-provider-grid">
+          <div class="help-provider-card">
+            <div class="hpc-name">🦙 Ollama</div>
+            <div class="hpc-key">Kein API-Key erforderlich</div>
+            <div class="hpc-limit">Serveradresse und Modell werden automatisch gespeichert.<br><small>Beispiel: <code>ollama pull qwen2.5vl:7b</code></small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="help-section">
+        <h3>Ausgabe-Tabs &amp; Aktionen</h3>
+        <ul>
+          <li><strong>📄 Text Prompt</strong> – Fertig formulierter <code>positive_prompt</code>, direkt einfügbar. Klick auf <strong>✏️ Bearbeiten</strong> macht ihn editierbar; <strong>💾 Speichern</strong> sichert die Änderung.</li>
+          <li><strong>🔎 Bildanalyse</strong> – Zeigt die rein faktische erste Stufe. Hier lässt sich prüfen, ob das Vision-Modell das Bild korrekt verstanden hat.</li>
+          <li><strong>🗂 Strukturiertes JSON</strong> – Enthält den fertigen Krea-2-Prompt zusammen mit Analyse und Fidelity-Hinweisen.</li>
+          <li><strong>⚙️ ComfyUI / A1111</strong> – Öffnet Export-Modal mit drei Formaten: <em>Automatic1111</em> (Pos + Neg + Parameter), <em>ComfyUI JSON</em> (CLIPTextEncode-Nodes), <em>FLUX/Fooocus</em> (bereinigter Einzel-Prompt).</li>
+          <li><strong>✨ Prompt-Variationen</strong> – 11 Buttons erscheinen nach der Generierung, darunter <strong>iPhone Selfie</strong> für einen unperfekten Amateur-Selfie-Look aus Armlänge ohne sichtbares Smartphone. Jede Variation ruft das Modell erneut auf und modifiziert den bestehenden Prompt.</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h3>Negative Prompt Editor</h3>
+        <p>Nach der Generierung erscheint unter dem Output-Feld ein editierbares <strong>Negative Prompt</strong>-Feld. Der automatisch generierte Negative Prompt kann hier direkt angepasst, ergänzt oder gekürzt werden – die Änderungen werden beim Export und beim ComfyUI/A1111-Format berücksichtigt.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Batch-Modus</h3>
+        <p>Oben im Upload-Panel auf <strong>Batch</strong> schalten. Mehrere Bilder per Drag &amp; Drop oder Klick hinzufügen. Nach Klick auf <strong>⚡ Batch generieren</strong> werden alle Bilder nacheinander analysiert. Am Ende wird automatisch eine <strong>ZIP-Datei</strong> mit <code>.txt</code> und <code>.json</code> für jedes Bild heruntergeladen.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>🕘 Prompt-Verlauf</h3>
+        <p>Jeder generierte Prompt (auch Batch und Variationen) wird automatisch im <strong>Verlauf</strong> gespeichert (max. 20 Einträge, im Browser-localStorage). Der <strong>🕘 Verlauf</strong>-Button im Header öffnet das Verlaufs-Modal. Dort kannst du:</p>
+        <ul>
+          <li>Prompts nach Datum, Stil, Stimmung, Modell und LoRA-Modus filtern (Tags sichtbar)</li>
+          <li>Einen alten Prompt per Klick wiederherstellen – er erscheint sofort im Output</li>
+          <li>Einzelne Einträge mit <strong>✕</strong> löschen</li>
+          <li>Den gesamten Verlauf löschen</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h3>Gespeicherte Ollama-Einstellungen</h3>
+        <p>Serveradresse und ausgewähltes Modell werden lokal gespeichert und beim nächsten Start automatisch wiederhergestellt. Mit <strong>↻</strong> lässt sich die Liste installierter Modelle jederzeit neu laden.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Skin Realism Enhancement</h3>
+        <p>Jeder Prompt enthält automatisch diese Qualitätsanweisung im <code>realism_notes</code>-Feld:</p>
+        <p style="margin-top:8px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:0.72rem;font-family:'Space Mono',monospace;color:var(--muted);line-height:1.7;">visible pores · skin texture · natural imperfections · subsurface scattering · flyaway hairs · baby hairs catching light · subtle eye moisture · organic texture · ultra-realistic photo-quality finish</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Tipps für beste Ergebnisse</h3>
+        <ul>
+          <li>Bilder mit klarer Beleuchtung und gut sichtbarer Szene liefern die detailliertesten Prompts.</li>
+          <li>Verwende ein Vision-fähiges Ollama-Modell; reine Textmodelle können das hochgeladene Bild nicht analysieren.</li>
+          <li>Nach der Generierung den Prompt im <strong>✏️ Bearbeiten</strong>-Modus nachpolieren, dann ComfyUI/A1111 exportieren.</li>
+          <li>Nutze <strong>Prompt-Variationen</strong> um schnell mehrere Stimmungs-Versionen zu testen, ohne neu hochzuladen.</li>
+          <li>Dark/Light/System-Theme und Sprache werden automatisch gespeichert.</li>
+          <li>Beim ersten Laden eines Modells kann Ollama etwas länger benötigen.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ── ENGLISH ───────────────────────────────────────────────────────── -->
+    <div class="help-content" id="hcEn">
+      <h2>Prompt <span>Generator</span> · Help</h2>
+      <div class="modal-version">Version 3.3 · Ollama Vision · Krea 2</div>
+
+      <div class="help-section">
+        <h3>What is the Prompt Generator?</h3>
+        <p>The Prompt Generator first creates a factual analysis of the uploaded image with an Ollama vision model. It then turns that verifiable analysis into a concise natural-language prompt specifically for <strong>Krea 2</strong>. Processing happens on your local or configured Ollama server.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Quick Start</h3>
+        <div class="help-step"><div class="help-step-num">1</div><p><strong>Upload image</strong> – Drag a JPG, PNG or WEBP (up to 20 MB) into the drop zone or click to select. For multiple images: enable <strong>Batch mode</strong>.</p></div>
+        <div class="help-step"><div class="help-step-num">2</div><p><strong>Connect Ollama</strong> – Enter the server URL, e.g. <code>http://127.0.0.1:11434</code> or your Ollama server's LAN IP.</p></div>
+        <div class="help-step"><div class="help-step-num">3</div><p><strong>Select a model</strong> – The app loads every model installed on the Ollama server. Choose a vision-capable model for image analysis.</p></div>
+        <div class="help-step"><div class="help-step-num">4</div><p><strong>Choose mode</strong> – <strong>With LoRA 🧬</strong>: face/hair excluded (LoRA handles them). <strong>Without LoRA 🎨</strong>: full character including face is described.</p></div>
+        <div class="help-step"><div class="help-step-num">5</div><p><strong>Adjust options</strong> – Style, mood, lighting, detail level, camera. Styles include Instagram Style, TikTok Style. Cameras: iPhone, Webcam, 35mm, 85mm etc.</p></div>
+        <div class="help-step"><div class="help-step-num">6</div><p><strong>⚡ Generate</strong> – Results appear in three tabs. Then edit, vary, export or check your history.</p></div>
+      </div>
+
+      <div class="help-section">
+        <h3>Ollama Connection</h3>
+        <div class="help-provider-grid">
+          <div class="help-provider-card">
+            <div class="hpc-name">🦙 Ollama</div>
+            <div class="hpc-key">No API key required</div>
+            <div class="hpc-limit">Server URL and model are saved automatically.<br><small>Example: <code>ollama pull qwen2.5vl:7b</code></small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="help-section">
+        <h3>Output Tabs &amp; Actions</h3>
+        <ul>
+          <li><strong>📄 Text Prompt</strong> – Ready-to-use <code>positive_prompt</code>. Click <strong>✏️ Edit</strong> to make it editable; <strong>💾 Save</strong> commits the changes.</li>
+          <li><strong>🔎 Image Analysis</strong> – Shows the strictly factual first stage so you can verify that the vision model understood the image.</li>
+          <li><strong>🗂 Structured JSON</strong> – Contains the finished Krea 2 prompt together with the analysis and fidelity notes.</li>
+          <li><strong>⚙️ ComfyUI / A1111</strong> – Opens export modal with three formats: <em>Automatic1111</em> (pos + neg + parameters), <em>ComfyUI JSON</em> (CLIPTextEncode nodes), <em>FLUX/Fooocus</em> (clean single prompt).</li>
+          <li><strong>✨ Prompt Variations</strong> – 11 buttons appear after generation, including <strong>iPhone Selfie</strong> for an imperfect amateur arm-length selfie with no visible phone. Each calls the model again to modify the existing prompt.</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h3>Negative Prompt Editor</h3>
+        <p>After generation, an editable <strong>Negative Prompt</strong> field appears below the output. The auto-generated negative prompt can be modified, extended or trimmed here – changes are reflected in exports and the ComfyUI/A1111 format modal.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Batch Mode</h3>
+        <p>Switch to <strong>Batch</strong> in the upload panel header. Add multiple images via drag &amp; drop or click. After clicking <strong>⚡ Run Batch</strong>, all images are analysed sequentially. A <strong>ZIP file</strong> with a <code>.txt</code> and <code>.json</code> for each image is downloaded automatically when done.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>🕘 Prompt History</h3>
+        <p>Every generated prompt (including batch and variations) is automatically saved to <strong>History</strong> (max. 20 entries, stored in browser localStorage). The <strong>🕘 History</strong> button in the header opens the history modal where you can:</p>
+        <ul>
+          <li>Browse entries with tags showing date, style, mood, model and LoRA mode</li>
+          <li>Restore any old prompt with one click – it appears instantly in the output</li>
+          <li>Delete individual entries with <strong>✕</strong></li>
+          <li>Clear all history</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h3>Saved Ollama Settings</h3>
+        <p>The server URL and selected model are stored locally and restored at the next start. Use <strong>↻</strong> to reload the installed model list at any time.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Skin Realism Enhancement</h3>
+        <p>Every prompt automatically includes this quality instruction in the <code>realism_notes</code> field:</p>
+        <p style="margin-top:8px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:0.72rem;font-family:'Space Mono',monospace;color:var(--muted);line-height:1.7;">visible pores · skin texture · natural imperfections · subsurface scattering · flyaway hairs · baby hairs catching light · subtle eye moisture · organic texture · ultra-realistic photo-quality finish</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Tips for Best Results</h3>
+        <ul>
+          <li>Images with clear lighting and a well-visible scene produce the most detailed prompts.</li>
+          <li>Use an Ollama vision model; text-only models cannot analyze the uploaded image.</li>
+          <li>After generating, polish the prompt in <strong>✏️ Edit</strong> mode, then export via ComfyUI/A1111.</li>
+          <li>Use <strong>Prompt Variations</strong> to quickly test different moods without re-uploading.</li>
+          <li>Dark/Light/System theme and language are saved automatically.</li>
+          <li>Ollama may take longer the first time it loads a model.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

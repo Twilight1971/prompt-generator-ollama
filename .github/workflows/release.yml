@@ -1,0 +1,54 @@
+name: Build Windows Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build portable EXE
+        run: npm run dist
+
+      - name: Create ZIP and checksum
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $exe = "dist/Prompt-Generator-Ollama-$version.exe"
+          $zip = "dist/Prompt-Generator-Ollama-$version-win-x64.zip"
+          Compress-Archive -LiteralPath $exe -DestinationPath $zip
+          $checksums = @($exe, $zip) | ForEach-Object {
+            $hash = (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $(Split-Path $_ -Leaf)"
+          }
+          $checksums | Set-Content -LiteralPath "dist/SHA256SUMS.txt" -Encoding ascii
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          gh release create "${{ github.ref_name }}" `
+            "dist/Prompt-Generator-Ollama-$version.exe" `
+            "dist/Prompt-Generator-Ollama-$version-win-x64.zip" `
+            "dist/SHA256SUMS.txt" `
+            --title "Prompt Generator Ollama $version" `
+            --generate-notes

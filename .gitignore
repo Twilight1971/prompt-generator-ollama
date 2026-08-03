@@ -1,0 +1,8 @@
+node_modules/
+.npm-cache/
+dist/
+dist-*/
+release/
+*.exe
+*.zip
+SHA256SUMS.txt

@@ -1,0 +1,35 @@
+{
+  "name": "prompt-generator-ollama",
+  "version": "3.3.0",
+  "description": "Lokaler Bild-Prompt-Generator mit Ollama",
+  "main": "main.js",
+  "author": "Prompt Generator",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^37.2.4",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "de.promptgenerator.ollama",
+    "productName": "Prompt Generator Ollama",
+    "asar": true,
+    "files": [
+      "index.html",
+      "main.js",
+      "preload.js"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "artifactName": "Prompt-Generator-Ollama-${version}.exe"
+    }
+  }
+}
