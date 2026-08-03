@@ -1,7 +1,9 @@
 node_modules/
+.playwright-cli/
 .npm-cache/
 dist/
 dist-*/
+output/
 release/
 *.exe
 *.zip
