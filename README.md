@@ -5,7 +5,7 @@
 [![Ollama](https://img.shields.io/badge/LLM-Ollama-black)](https://ollama.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Desktop-App für Windows, die Bilder mit einem lokalen oder im LAN erreichbaren Ollama-Vision-Modell analysiert und daraus bildgetreue Prompts für Krea 2 erstellt. Kein API-Key erforderlich.
+Desktop-App für Windows, die Bilder mit einem lokalen oder im LAN erreichbaren Ollama-Vision-Modell analysiert und daraus bildgetreue Prompts erstellen. Kein API-Key erforderlich.
 
 [Deutsch](#deutsch) · [English](#english)
 
